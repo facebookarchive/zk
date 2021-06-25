@@ -1,8 +1,8 @@
 package flw
 
 import (
-	"strings"
 	"strconv"
+	"strings"
 )
 
 // FormatServers takes a slice of addresses, and makes sure they are in a format

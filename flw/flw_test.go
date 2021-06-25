@@ -80,21 +80,20 @@ func TestFLWSrvr(t *testing.T) {
 		t.Errorf("no *ServerStats instances returned")
 	}
 	expected := &ServerStats{
-		Sent: 4220,
-		Received: 4207,
-		NodeCount: 306,
-		MinLatency: 0,
-		AvgLatency: 1,
-		MaxLatency: 10,
+		Sent:        4220,
+		Received:    4207,
+		NodeCount:   306,
+		MinLatency:  0,
+		AvgLatency:  1,
+		MaxLatency:  10,
 		Connections: 81,
 		Outstanding: 1,
-		Epoch: 17,
-		Counter: 175804215,
-		Mode: ModeLeader,
-		Version: "3.4.6-1569965",
+		Epoch:       17,
+		Counter:     175804215,
+		Mode:        ModeLeader,
+		Version:     "3.4.6-1569965",
 	}
 	stats := statsSlice[0]
-
 
 	if stats.Error != nil {
 		t.Fatalf("unexpected error seen in stats: %v", err.Error())
