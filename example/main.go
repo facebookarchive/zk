@@ -54,12 +54,10 @@ func testFlw() {
 		fmt.Println("no *ServerClient instances returned")
 		return
 	}
-	if !ok {
-		fmt.Printf("error getting response for 'cons': %v\n", clientsSlice[0].Error)
-		return
-	}
 
-	for idx, client := range clientsSlice {
-		fmt.Printf("got cons client for address %s -> %+v\n", testServers[idx], client)
+	for idx, clients := range clientsSlice {
+		for _, client := range clients.Clients {
+			fmt.Printf("got cons client for address %s -> %+v\n", testServers[idx], client)
+		}
 	}
 }
