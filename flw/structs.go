@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-// ServerClients is a struct for the FLWCons() function. It's used to provide
+// ServerClients is a struct for the Cons() function. It's used to provide
 // the list of Clients.
 //
-// This is needed because FLWCons() takes multiple servers.
+// This is needed because Cons() takes multiple servers.
 type ServerClients struct {
 	Clients []*ServerClient
 	Error   error
