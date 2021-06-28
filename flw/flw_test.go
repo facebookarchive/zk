@@ -36,10 +36,10 @@ func TestRuok(t *testing.T) {
 
 	oks := Ruok([]string{l.Addr().String()}, time.Second*10)
 	if len(oks) == 0 {
-		t.Errorf("no values returned")
+		t.Errorf("No values returned")
 	}
 	if !oks[0] {
-		t.Errorf("instance should be marked as OK")
+		t.Errorf("Instance should be marked as OK")
 	}
 
 	//
@@ -55,10 +55,10 @@ func TestRuok(t *testing.T) {
 
 	oks = Ruok([]string{l.Addr().String()}, time.Second*10)
 	if len(oks) == 0 {
-		t.Errorf("no values returned")
+		t.Errorf("No values returned")
 	}
 	if oks[0] {
-		t.Errorf("instance should be marked as not OK")
+		t.Errorf("Instance should be marked as not OK")
 	}
 }
 
@@ -74,10 +74,10 @@ func TestSrvr(t *testing.T) {
 
 	statsSlice, ok := Srvr([]string{l.Addr().String()}, time.Second*10)
 	if !ok {
-		t.Errorf("failure indicated on 'srvr' parsing")
+		t.Errorf("Failure indicated on 'srvr' parsing")
 	}
 	if len(statsSlice) == 0 {
-		t.Errorf("no *ServerStats instances returned")
+		t.Errorf("No *ServerStats instances returned")
 	}
 	expected := &ServerStats{
 		Sent:        4220,
@@ -96,7 +96,7 @@ func TestSrvr(t *testing.T) {
 	stats := statsSlice[0]
 
 	if stats.Error != nil {
-		t.Fatalf("unexpected error seen in stats: %v", err.Error())
+		t.Fatalf("Unexpected error seen in stats: %v", err.Error())
 	}
 
 	if stats.Sent != expected.Sent {
@@ -229,7 +229,7 @@ func TestCons(t *testing.T) {
 			c := results[i]
 
 			if v.Error != nil {
-				t.Errorf("client error seen: %v", err.Error())
+				t.Errorf("Unexpected client error: %s", err.Error())
 			}
 
 			if v.Queued != c.Queued {
