@@ -19,7 +19,7 @@ func testFlw() {
 
 	l, err := net.Listen("tcp", fmt.Sprintf("localhost:0"))
 	if err != nil {
-		fmt.Printf("Could not connect: %v\n", err)
+		fmt.Printf("could not connect: %v\n", err)
 		return
 	}
 	defer l.Close()
