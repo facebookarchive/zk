@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
-	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -67,18 +66,13 @@ func main() {
 }
 
 func downloadToFile(sourceURL, filepath string) error {
-	proxyClient := &http.Client{Transport: &http.Transport{
-		Proxy:           http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}}
-
 	out, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 
-	response, err := proxyClient.Get(sourceURL)
+	response, err := http.Get(sourceURL)
 	if err != nil {
 		return err
 	}
