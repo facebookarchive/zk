@@ -25,6 +25,7 @@ func main() {
 	zkURL := flag.String("url", defaultZkURL, "Download URL for Apache Zookeeper server installation")
 	zkConfigPath := flag.String("config", defaultConfigPath, "Zookeeper config filename")
 	archiveName := flag.String("archive", defaultArchiveName, "Downloaded archive name")
+	flag.Parse()
 
 	workdir, err := os.Getwd()
 	if err != nil {
