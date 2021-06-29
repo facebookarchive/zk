@@ -1,18 +1,16 @@
 package main
 
-
 import (
-	"net"
 	"fmt"
+	"net"
 	"time"
+
 	"github.com/facebookincubator/zk/flw"
 )
-
 
 func main() {
 	testFlw()
 }
-
 
 func testFlw() {
 	testServers := []string{"localhost:2181"}
@@ -47,7 +45,6 @@ func testFlw() {
 	for idx, ok := range okSlice {
 		fmt.Printf("got ruok response for address %s -> %+v\n", testServers[idx], ok)
 	}
-
 
 	clientsSlice, ok := flw.Cons(testServers, time.Second*10)
 	if len(clientsSlice) == 0 || len(clientsSlice[0].Clients) == 0 {
