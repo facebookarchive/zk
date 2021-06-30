@@ -8,15 +8,24 @@ import (
 )
 
 func TestCreateServer(t *testing.T) {
-	server := NewZKServer("3.6.2", "default.cfg")
+	cfg := map[string]string{
+		"tickTime":               "500",
+		"initLimit":              "10",
+		"syncLimit":              "5",
+		"dataDir":                "/tmp/gozk",
+		"clientPort":             "2181",
+		"4lw.commands.whitelist": "*",
+	}
+	server, err := NewZKServer("3.6.2", cfg)
+	if err != nil {
+		t.Errorf("unexpected error while initializing zk server: %v", err)
+	}
 
 	// run ZK in separate goroutine
-	if err := server.Run(); err != nil {
+	if err = server.Run(); err != nil {
 		t.Errorf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
-	// wait for zk server to bootstrap
-	time.Sleep(2 * time.Second)
 
 	// verify server status is ok
 	oks := flw.Ruok([]string{"0.0.0.0"}, 5*time.Second)

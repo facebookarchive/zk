@@ -12,23 +12,42 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/facebookincubator/zk/flw"
 )
 
 const zkFormatURL = "https://archive.apache.org/dist/zookeeper/zookeeper-%s/apache-zookeeper-%s-bin.tar.gz"
 const defaultArchiveName = "server.tar.gz"
+const defaultConfigName = "zk.cfg"
+const maxRetries = 10
 
 type ZKServer struct {
-	Version    string
-	ConfigPath string
+	Version string
+	Config  map[string]string
 
 	cmd *exec.Cmd
 }
 
-func NewZKServer(version, configPath string) *ZKServer {
-	return &ZKServer{
-		Version:    version,
-		ConfigPath: configPath,
+// NewZKServer creates a new ZKServer instance using the given version and config map.
+// Contents of the config map are written to a file which will later be used by the ZK binary.
+func NewZKServer(version string, config map[string]string) (*ZKServer, error) {
+	file, err := os.Create(defaultConfigName)
+	if err != nil {
+		return nil, err
 	}
+	defer file.Close()
+
+	for k, v := range config {
+		if _, err = file.WriteString(fmt.Sprintf("%s=%s\n", k, v)); err != nil {
+			return nil, fmt.Errorf("error writing config to file: %v", err)
+		}
+	}
+
+	return &ZKServer{
+		Version: version,
+		Config:  config,
+	}, nil
 }
 
 // Run downloads the specified Zookeeper version from Apache's website,
@@ -41,7 +60,6 @@ func (server *ZKServer) Run() error {
 	if err != nil {
 		return fmt.Errorf("error getting working directory: %s", err.Error())
 	}
-	server.ConfigPath = filepath.Join(workdir, server.ConfigPath) // zk config file is expected to be in the project's root dir
 	archivePath := filepath.Join(workdir, defaultArchiveName)
 	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
 		err = downloadToFile(zkURL, archivePath)
@@ -62,13 +80,17 @@ func (server *ZKServer) Run() error {
 		return fmt.Errorf("error changing server script permissions: %s\n", err)
 	}
 
-	server.cmd = exec.Command(serverScriptPath, "start-foreground", server.ConfigPath)
+	server.cmd = exec.Command(serverScriptPath, "start-foreground", filepath.Join(workdir, defaultConfigName))
 	server.cmd.Stdout = os.Stdout
 	server.cmd.Stderr = os.Stderr
 
 	err = server.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("error executing server command: %s\n", err)
+	}
+
+	if err = waitForStart(maxRetries, time.Second); err != nil {
+		return err
 	}
 
 	return nil
@@ -174,4 +196,19 @@ func ensureBaseDir(filepath string) error {
 		return nil
 	}
 	return os.MkdirAll(baseDir, 0755)
+}
+
+// waitForStart blocks until the server is up
+func waitForStart(maxRetry int, interval time.Duration) error {
+	serverAddrs := []string{"0.0.0.0"}
+
+	for i := 0; i < maxRetry; i++ {
+		_, ok := flw.Srvr(serverAddrs, time.Second)
+		if ok {
+			return nil
+		}
+		time.Sleep(interval)
+	}
+
+	return fmt.Errorf("unable to verify health of servers")
 }
