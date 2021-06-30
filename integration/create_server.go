@@ -17,18 +17,31 @@ import (
 const zkFormatURL = "https://archive.apache.org/dist/zookeeper/zookeeper-%s/apache-zookeeper-%s-bin.tar.gz"
 const defaultArchiveName = "server.tar.gz"
 
-// RunZookeeperServer downloads the specified Zookeeper version from Apache's website,
+type ZKServer struct {
+	Version    string
+	ConfigPath string
+
+	cmd *exec.Cmd
+}
+
+func NewZKServer(version, configPath string) *ZKServer {
+	return &ZKServer{
+		Version:    version,
+		ConfigPath: configPath,
+	}
+}
+
+// Run downloads the specified Zookeeper version from Apache's website,
 // extracts it and runs it using the config specified by configPath.
-// ReadyChan is used to notify the caller that the server has been initialized,
-// and the caller can send to exitChan in order to terminate the server.
-func RunZookeeperServer(version, configPath string, readyChan, exitChan chan struct{}) error {
-	zkURL := fmt.Sprintf(zkFormatURL, version, version)
+// The server runs in the background until Shutdown is called.
+func (server *ZKServer) Run() error {
+	zkURL := fmt.Sprintf(zkFormatURL, server.Version, server.Version)
 
 	workdir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("error getting working directory: %s", err.Error())
 	}
-	configPath = filepath.Join(workdir, configPath) // zk config file is expected to be in the project's root dir
+	server.ConfigPath = filepath.Join(workdir, server.ConfigPath) // zk config file is expected to be in the project's root dir
 	archivePath := filepath.Join(workdir, defaultArchiveName)
 	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
 		err = downloadToFile(zkURL, archivePath)
@@ -49,24 +62,21 @@ func RunZookeeperServer(version, configPath string, readyChan, exitChan chan str
 		return fmt.Errorf("error changing server script permissions: %s\n", err)
 	}
 
-	cmd := exec.Command(serverScriptPath, "start-foreground", configPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Start()
+	server.cmd = exec.Command(serverScriptPath, "start-foreground", server.ConfigPath)
+	server.cmd.Stdout = os.Stdout
+	server.cmd.Stderr = os.Stderr
+
+	err = server.cmd.Start()
 	if err != nil {
 		return fmt.Errorf("error executing server command: %s\n", err)
 	}
 
-	readyChan <- struct{}{} // notify caller that server has started successfully
-
-	// wait for exit signal from caller
-	select {
-	case <-exitChan:
-		log.Println("got exit signal, shutting down")
-		break
-	}
-
 	return nil
+}
+
+func (server *ZKServer) Shutdown() error {
+	log.Printf("Shutdown() called, killing server process")
+	return server.cmd.Process.Kill()
 }
 
 func downloadToFile(sourceURL, filepath string) error {
