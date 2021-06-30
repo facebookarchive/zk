@@ -8,14 +8,8 @@ import (
 )
 
 func TestCreateServer(t *testing.T) {
-	cfg := map[string]string{
-		"tickTime":               "500",
-		"initLimit":              "10",
-		"syncLimit":              "5",
-		"dataDir":                "/tmp/gozk",
-		"clientPort":             "2181",
-		"4lw.commands.whitelist": "*",
-	}
+	cfg := DefaultConfig()
+
 	server, err := NewZKServer("3.6.2", cfg)
 	if err != nil {
 		t.Errorf("unexpected error while initializing zk server: %v", err)

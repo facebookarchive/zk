@@ -101,6 +101,17 @@ func (server *ZKServer) Shutdown() error {
 	return server.cmd.Process.Kill()
 }
 
+func DefaultConfig() map[string]string {
+	return map[string]string{
+		"tickTime":               "500",
+		"initLimit":              "10",
+		"syncLimit":              "5",
+		"dataDir":                "/tmp/gozk",
+		"clientPort":             "2181",
+		"4lw.commands.whitelist": "*",
+	}
+}
+
 func downloadToFile(sourceURL, filepath string) error {
 	out, err := os.Create(filepath)
 	if err != nil {
