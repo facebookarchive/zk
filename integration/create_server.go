@@ -1,10 +1,9 @@
-package main
+package integration
 
 import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -16,53 +15,69 @@ import (
 	"strings"
 )
 
-const defaultZkURL = "https://archive.apache.org/dist/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz"
-const defaultConfigPath = "zk.cfg"
+const zkFormatURL = "https://archive.apache.org/dist/zookeeper/zookeeper-%s/apache-zookeeper-%s-bin.tar.gz"
 const defaultArchiveName = "server.tar.gz"
 
-func main() {
-	zkURL := flag.String("url", defaultZkURL, "Download URL for Apache Zookeeper server installation")
-	zkConfigPath := flag.String("config", defaultConfigPath, "Zookeeper config filename")
-	archiveName := flag.String("archive", defaultArchiveName, "Downloaded archive name")
-	flag.Parse()
+// RunZookeeperServer downloads the specified Zookeeper version from Apache's website,
+// extracts it and runs it using the config specified by configPath.
+// ReadyChan is used to notify the caller that the server has been initialized,
+// and the caller can send to exitChan in order to terminate the server.
+func RunZookeeperServer(version, configPath string, readyChan, exitChan chan struct{}) error {
+	zkURL := fmt.Sprintf(zkFormatURL, version, version)
 
 	workdir, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("error getting working directory: %s", err.Error())
+		return fmt.Errorf("error getting working directory: %s", err.Error())
 	}
-	*zkConfigPath = filepath.Join(workdir, *zkConfigPath) // zk config file is expected to be in the project's root dir
-
-	err = downloadToFile(*zkURL, filepath.Join(workdir, *archiveName))
-	if err != nil {
-		log.Fatalf("error downloading file: %s\n", err)
+	configPath = filepath.Join(workdir, configPath) // zk config file is expected to be in the project's root dir
+	archivePath := filepath.Join(workdir, defaultArchiveName)
+	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
+		err = downloadToFile(zkURL, archivePath)
+		if err != nil {
+			return fmt.Errorf("error downloading file: %s\n", err)
+		}
+		log.Printf("successfully downloaded archive %s\n", defaultArchiveName)
 	}
 
-	log.Printf("successfully downloaded archive %s\n", *archiveName)
-	root, err := extractTarGz(filepath.Join(workdir, *archiveName))
+	root, err := extractTarGz(archivePath)
 	if err != nil {
-		log.Fatalf("error extracting file: %s\n", err)
+		return fmt.Errorf("error extracting file: %s\n", err)
 	}
 
 	serverScriptPath := filepath.Join(workdir, root, "bin/zkServer.sh")
 	err = os.Chmod(serverScriptPath, 0777)
 	if err != nil {
-		log.Fatalf("error changing server script permissions: %s\n", err)
+		return fmt.Errorf("error changing server script permissions: %s\n", err)
 	}
 
-	cmd := exec.Command("/bin/bash", serverScriptPath, "start-foreground", *zkConfigPath)
+	cmd := exec.Command(serverScriptPath, "start-foreground", configPath)
 	stdout, err := cmd.StdoutPipe()
 	err = cmd.Start()
 	if err != nil {
-		log.Fatalf("error executing server command: %s\n", err)
+		return fmt.Errorf("error executing server command: %s\n", err)
 	}
 
+	go handleOutput(stdout)
+
+	readyChan <- struct{}{} // notify caller that server has started successfully
+
+	// wait for exit signal from caller
+	select {
+	case <-exitChan:
+		log.Printf("got exit signal, shutting down")
+		break
+	}
+
+	return nil
+}
+
+func handleOutput(stdout io.ReadCloser) {
 	stdoutScanner := bufio.NewScanner(stdout)
 	stdoutScanner.Split(bufio.ScanLines)
 	for stdoutScanner.Scan() {
 		m := stdoutScanner.Text()
 		log.Println(m)
 	}
-	cmd.Wait()
 }
 
 func downloadToFile(sourceURL, filepath string) error {
