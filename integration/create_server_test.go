@@ -3,6 +3,8 @@ package integration
 import (
 	"testing"
 	"time"
+
+	"github.com/facebookincubator/zk/flw"
 )
 
 func TestCreateServer(t *testing.T) {
@@ -21,7 +23,10 @@ func TestCreateServer(t *testing.T) {
 	// wait for server to start w/ a set timeout deadline
 	select {
 	case <-readyChan:
-		// server started successfully or got an error, terminate it
+		oks := flw.Ruok([]string{"0.0.0.0"}, 5*time.Second)
+		if len(oks) < 1 || !oks[0] {
+			t.Errorf("ruok indicates server is running in an error state")
+		}
 		exitChan <- struct{}{}
 		break
 	case <-time.After(time.Minute):
