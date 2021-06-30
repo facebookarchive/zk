@@ -18,10 +18,10 @@ func TestCreateServer(t *testing.T) {
 		}
 	}()
 
-	// wait for zookeeper server to start w/ a set timeout deadline
+	// wait for server to start w/ a set timeout deadline
 	select {
 	case <-readyChan:
-		// zk server started successfully or got an error, terminate it
+		// server started successfully or got an error, terminate it
 		exitChan <- struct{}{}
 		break
 	case <-time.After(time.Minute):
