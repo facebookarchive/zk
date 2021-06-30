@@ -2,7 +2,6 @@ package integration
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -51,33 +50,23 @@ func RunZookeeperServer(version, configPath string, readyChan, exitChan chan str
 	}
 
 	cmd := exec.Command(serverScriptPath, "start-foreground", configPath)
-	stdout, err := cmd.StdoutPipe()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Start()
 	if err != nil {
 		return fmt.Errorf("error executing server command: %s\n", err)
 	}
-
-	go handleOutput(stdout)
 
 	readyChan <- struct{}{} // notify caller that server has started successfully
 
 	// wait for exit signal from caller
 	select {
 	case <-exitChan:
-		log.Printf("got exit signal, shutting down")
+		log.Println("got exit signal, shutting down")
 		break
 	}
 
 	return nil
-}
-
-func handleOutput(stdout io.ReadCloser) {
-	stdoutScanner := bufio.NewScanner(stdout)
-	stdoutScanner.Split(bufio.ScanLines)
-	for stdoutScanner.Scan() {
-		m := stdoutScanner.Text()
-		log.Println(m)
-	}
 }
 
 func downloadToFile(sourceURL, filepath string) error {
