@@ -24,24 +24,22 @@ const maxRetries = 10
 
 type ZKServer struct {
 	Version string
-	Config  map[string]string
+	Config  *ServerConfig
 
 	cmd *exec.Cmd
 }
 
 // NewZKServer creates a new ZKServer instance using the given version and config map.
-// Contents of the config map are written to a file which will later be used by the ZK binary.
-func NewZKServer(version string, config map[string]string) (*ZKServer, error) {
+// Contents of the config struct are written to a file which will later be used by the ZK binary.
+func NewZKServer(version string, config *ServerConfig) (*ZKServer, error) {
 	file, err := os.Create(defaultConfigName)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	for k, v := range config {
-		if _, err = file.WriteString(fmt.Sprintf("%s=%s\n", k, v)); err != nil {
-			return nil, fmt.Errorf("error writing config to file: %v", err)
-		}
+	if err = config.Marshall(file); err != nil {
+		return nil, fmt.Errorf("error writing config to file: %v", err)
 	}
 
 	return &ZKServer{
@@ -69,12 +67,15 @@ func (server *ZKServer) Run() error {
 		log.Printf("successfully downloaded archive %s\n", defaultArchiveName)
 	}
 
-	root, err := extractTarGz(archivePath)
-	if err != nil {
-		return fmt.Errorf("error extracting file: %s\n", err)
+	folderName := "apache-zookeeper-" + server.Version + "-bin"
+	if _, err := os.Stat(filepath.Join(workdir, folderName)); os.IsNotExist(err) {
+		_, err := extractTarGz(archivePath)
+		if err != nil {
+			return fmt.Errorf("error extracting file: %s\n", err)
+		}
 	}
 
-	serverScriptPath := filepath.Join(workdir, root, "bin/zkServer.sh")
+	serverScriptPath := filepath.Join(workdir, folderName, "bin/zkServer.sh")
 	err = os.Chmod(serverScriptPath, 0777)
 	if err != nil {
 		return fmt.Errorf("error changing server script permissions: %s\n", err)
@@ -99,17 +100,6 @@ func (server *ZKServer) Run() error {
 func (server *ZKServer) Shutdown() error {
 	log.Printf("Shutdown() called, killing server process")
 	return server.cmd.Process.Kill()
-}
-
-func DefaultConfig() map[string]string {
-	return map[string]string{
-		"tickTime":               "500",
-		"initLimit":              "10",
-		"syncLimit":              "5",
-		"dataDir":                "/tmp/gozk",
-		"clientPort":             "2181",
-		"4lw.commands.whitelist": "*",
-	}
 }
 
 func downloadToFile(sourceURL, filepath string) error {
