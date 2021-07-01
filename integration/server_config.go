@@ -27,7 +27,7 @@ type ServerConfig struct {
 	TickTime                 int    // Number of milliseconds of each tick
 	InitLimit                int    // Number of ticks that the initial synchronization phase can take
 	SyncLimit                int    // Number of ticks that can pass between sending a request and getting an acknowledgement
-	DataDir                  string // Direcrory where the snapshot is stored
+	DataDir                  string // Directory where the snapshot is stored
 	ClientPort               int    // Port at which clients will connect
 	AutoPurgeSnapRetainCount int    // Number of snapshots to retain in dataDir
 	AutoPurgePurgeInterval   int    // Purge task internal in hours (0 to disable auto purge)
@@ -90,11 +90,11 @@ func (sc ServerConfig) Marshall(w io.Writer) error {
 	fmt.Fprintf(w, "4lw.commands.whitelist=%s", sc.FLWCommandsWhitelist)
 
 	if len(sc.Servers) < 2 {
-		// if we dont have more than 2 servers we just dont specify server list to start in standalone mode
+		// if we don't have more than 2 servers, we just don't specify server list to start in standalone mode
 		// see https://zookeeper.apache.org/doc/current/zookeeperStarted.html#sc_InstallingSingleMode for more details.
 		return nil
 	}
-	// if we then have more than one server force it to be distributed
+	// if we then have more than one server, force it to be distributed
 	fmt.Fprintln(w, "standaloneEnabled=false")
 
 	for _, srv := range sc.Servers {
