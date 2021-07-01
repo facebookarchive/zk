@@ -1,4 +1,4 @@
-package hostprovider
+package dnshostprovider
 
 import (
 	"fmt"

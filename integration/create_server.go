@@ -90,7 +90,7 @@ func (server *ZKServer) Run() error {
 		return fmt.Errorf("error executing server command: %s\n", err)
 	}
 
-	if err = waitForStart(maxRetries, time.Second); err != nil {
+	if err = waitForStart([]string{"0.0.0.0"}, maxRetries, time.Second); err != nil {
 		return err
 	}
 
@@ -199,12 +199,10 @@ func ensureBaseDir(filepath string) error {
 	return os.MkdirAll(baseDir, 0755)
 }
 
-// waitForStart blocks until the server is up
-func waitForStart(maxRetry int, interval time.Duration) error {
-	serverAddrs := []string{"0.0.0.0"}
-
+// waitForStart blocks until all servers from the specified addresses slice are up
+func waitForStart(addresses []string, maxRetry int, interval time.Duration) error {
 	for i := 0; i < maxRetry; i++ {
-		_, ok := flw.Srvr(serverAddrs, time.Second)
+		_, ok := flw.Srvr(addresses, time.Second)
 		if ok {
 			return nil
 		}

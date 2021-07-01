@@ -3,6 +3,7 @@ package integration
 import (
 	"fmt"
 	"io"
+	"strconv"
 )
 
 const (
@@ -31,7 +32,8 @@ type ServerConfig struct {
 	AutoPurgeSnapRetainCount int    // Number of snapshots to retain in dataDir
 	AutoPurgePurgeInterval   int    // Purge task internal in hours (0 to disable auto purge)
 	FLWCommandsWhitelist     string
-	Servers                  []ServerConfigServer
+	Servers                  []*ServerConfigServer
+	ReconfigEnabled          bool
 }
 
 type ErrMissingServerConfigField string
@@ -83,10 +85,9 @@ func (sc ServerConfig) Marshall(w io.Writer) error {
 		fmt.Fprintf(w, "autopurge.snapRetainCount=%d\n", sc.AutoPurgeSnapRetainCount)
 		fmt.Fprintf(w, "autopurge.purgeInterval=%d\n", sc.AutoPurgePurgeInterval)
 	}
-	// enable reconfig.
-	// TODO: allow setting this
-	fmt.Fprintln(w, "reconfigEnabled=true")
-	fmt.Fprintln(w, "4lw.commands.whitelist=*")
+
+	fmt.Fprintf(w, "reconfigEnabled=%s", strconv.FormatBool(sc.ReconfigEnabled))
+	fmt.Fprintf(w, "4lw.commands.whitelist=%s", sc.FLWCommandsWhitelist)
 
 	if len(sc.Servers) < 2 {
 		// if we dont have more than 2 servers we just dont specify server list to start in standalone mode
