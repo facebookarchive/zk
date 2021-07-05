@@ -67,15 +67,15 @@ func (server *ZKServer) Run() error {
 		log.Printf("successfully downloaded archive %s\n", defaultArchiveName)
 	}
 
-	folderName := "apache-zookeeper-" + server.Version + "-bin"
-	if _, err := os.Stat(filepath.Join(workdir, folderName)); os.IsNotExist(err) {
+	dirName := "apache-zookeeper-" + server.Version + "-bin"
+	if _, err := os.Stat(filepath.Join(workdir, dirName)); os.IsNotExist(err) {
 		_, err := extractTarGz(archivePath)
 		if err != nil {
 			return fmt.Errorf("error extracting file: %s\n", err)
 		}
 	}
 
-	serverScriptPath := filepath.Join(workdir, folderName, "bin/zkServer.sh")
+	serverScriptPath := filepath.Join(workdir, dirName, "bin/zkServer.sh")
 	err = os.Chmod(serverScriptPath, 0777)
 	if err != nil {
 		return fmt.Errorf("error changing server script permissions: %s\n", err)
