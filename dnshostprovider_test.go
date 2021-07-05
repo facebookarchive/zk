@@ -1,4 +1,4 @@
-package dnshostprovider
+package zk
 
 import (
 	"testing"
