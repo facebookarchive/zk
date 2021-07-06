@@ -1,3 +1,3 @@
-module github.com/facebookincubator/zk/
+module github.com/facebookincubator/zk
 
 go 1.16
