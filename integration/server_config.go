@@ -86,8 +86,8 @@ func (sc ServerConfig) Marshall(w io.Writer) error {
 		fmt.Fprintf(w, "autopurge.purgeInterval=%d\n", sc.AutoPurgePurgeInterval)
 	}
 
-	fmt.Fprintf(w, "reconfigEnabled=%s", strconv.FormatBool(sc.ReconfigEnabled))
-	fmt.Fprintf(w, "4lw.commands.whitelist=%s", sc.FLWCommandsWhitelist)
+	fmt.Fprintf(w, "reconfigEnabled=%s\n", strconv.FormatBool(sc.ReconfigEnabled))
+	fmt.Fprintf(w, "4lw.commands.whitelist=%s\n", sc.FLWCommandsWhitelist)
 
 	if len(sc.Servers) < 2 {
 		// if we don't have more than 2 servers, we just don't specify server list to start in standalone mode
