@@ -26,5 +26,5 @@ func TestCreateServer(t *testing.T) {
 	if len(oks) < 1 || !oks[0] {
 		t.Errorf("ruok indicates server is running in an error state")
 	}
-	//server.Shutdown()
+	server.Shutdown()
 }
