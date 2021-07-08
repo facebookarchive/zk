@@ -22,9 +22,13 @@ func TestAuthentication(t *testing.T) {
 	}
 
 	// attempt to authenticate against server
-	_, err = Connect([]string{"127.0.0.1"})
+	client, err := Connect([]string{"127.0.0.1"})
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+
+	if client.sessionID == 0 {
+		t.Errorf("expected non-zero session ID")
 	}
 
 	server.Shutdown()
