@@ -3,7 +3,6 @@ package zk
 import (
 	"bytes"
 	"errors"
-	"io"
 	"net"
 	"time"
 
@@ -92,31 +91,13 @@ func (c *Connection) authenticate() error {
 	c.conn.Write(sendBuf.Bytes())
 
 	// receive bytes from same socket, reading the message length first
-	recvBuf := make([]byte, 256)
-	_, err := io.ReadFull(c.conn, recvBuf[:4])
+	dec := jute.NewBinaryDecoder(c.conn)
+
+	_, err := dec.ReadInt() // read response length
 	if err != nil {
 		return err
 	}
-
-	recvReader := bytes.NewReader(recvBuf)
-	dec := jute.NewBinaryDecoder(recvReader)
-
-	responseLength, err := dec.ReadInt()
-	if err != nil {
-		return err
-	}
-	if cap(recvBuf) < int(responseLength) {
-		recvBuf = make([]byte, responseLength)
-	}
-
-	_, err = io.ReadFull(c.conn, recvBuf[:responseLength])
-	if err != nil {
-		return err
-	}
-
 	response := proto.ConnectResponse{}
-	recvReader = bytes.NewReader(recvBuf)
-	dec = jute.NewBinaryDecoder(recvReader)
 	if err = response.Read(dec); err != nil {
 		return err
 	}
