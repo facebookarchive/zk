@@ -2,7 +2,6 @@ package zk
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"io"
 	"net"
@@ -66,7 +65,6 @@ func (c *Connection) dial() error {
 }
 
 func (c *Connection) authenticate() error {
-	sendSlice := make([]byte, 256)
 	sendBuf := &bytes.Buffer{}
 
 	// create and encode request for zk server
@@ -82,13 +80,16 @@ func (c *Connection) authenticate() error {
 		return err
 	}
 
-	// write bytes of request to buf
-	requestLen := sendBuf.Len()
-	copy(sendSlice[4:], sendBuf.Bytes())
-	binary.BigEndian.PutUint32(sendSlice[:4], uint32(requestLen))
+	// copy encoded request bytes
+	requestBytes := append([]byte(nil), sendBuf.Bytes()...)
 
-	// send request bytes from sendSlice via net.conn
-	c.conn.Write(sendSlice[:requestLen+4])
+	// use encoder to prepend request length to the request bytes
+	sendBuf.Reset()
+	enc.WriteBuffer(requestBytes)
+	enc.WriteEnd()
+
+	// send request payload via net.conn
+	c.conn.Write(sendBuf.Bytes())
 
 	// receive bytes from same socket, reading the message length first
 	recvBuf := make([]byte, 256)
