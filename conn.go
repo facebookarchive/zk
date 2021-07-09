@@ -16,6 +16,7 @@ import (
 const defaultProtocolVersion = 0
 
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
+var emptyPassword = make([]byte, 16)
 
 type Connection struct {
 	provider       HostProvider
@@ -31,7 +32,7 @@ func Connect(servers []string) (*Connection, error) {
 	conn := &Connection{
 		provider:       &DNSHostProvider{},
 		sessionTimeout: time.Second,
-		passwd:         make([]byte, 16),
+		passwd:         emptyPassword,
 	}
 
 	err := conn.provider.Init(flw.FormatServers(servers))
@@ -87,15 +88,11 @@ func (c *Connection) authenticate() error {
 	binary.BigEndian.PutUint32(sendSlice[:4], uint32(requestLen))
 
 	// send request bytes from sendSlice via net.conn
-	c.conn.SetWriteDeadline(time.Now().Add(c.sessionTimeout))
 	c.conn.Write(sendSlice[:requestLen+4])
-	c.conn.SetWriteDeadline(time.Time{})
 
 	// receive bytes from same socket, reading the message length first
 	recvBuf := make([]byte, 256)
-	c.conn.SetReadDeadline(time.Now().Add(c.sessionTimeout * 10))
 	_, err := io.ReadFull(c.conn, recvBuf[:4])
-	c.conn.SetReadDeadline(time.Time{})
 	if err != nil {
 		return err
 	}
@@ -125,7 +122,7 @@ func (c *Connection) authenticate() error {
 
 	if response.SessionId == 0 {
 		c.sessionID = 0
-		c.passwd = make([]byte, 16)
+		c.passwd = emptyPassword
 		c.lastZxid = 0
 		return ErrSessionExpired
 	}

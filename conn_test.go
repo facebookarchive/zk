@@ -31,5 +31,4 @@ func TestAuthentication(t *testing.T) {
 	if client.sessionID == 0 {
 		t.Errorf("expected non-zero session ID")
 	}
-
 }
