@@ -16,9 +16,6 @@ jobs:
         with:
           go-version: 1.16
 
-      - name: Get Jute
-        run: go get github.com/go-zookeeper/jute/lib/go/jute@master
-
       - name: Build
         run: go build -v ./...
 
