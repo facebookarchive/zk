@@ -20,6 +20,7 @@ func TestAuthentication(t *testing.T) {
 		t.Errorf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
+	defer server.Shutdown()
 
 	// attempt to authenticate against server
 	client, err := Connect([]string{"127.0.0.1"})
@@ -30,7 +31,5 @@ func TestAuthentication(t *testing.T) {
 	if client.sessionID == 0 {
 		t.Errorf("expected non-zero session ID")
 	}
-
-	server.Shutdown()
 
 }

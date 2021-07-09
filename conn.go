@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"sync/atomic"
 	"time"
 
 	"github.com/facebookincubator/zk/flw"
@@ -118,13 +117,13 @@ func (c *Connection) authenticate() error {
 	}
 
 	if response.SessionId == 0 {
-		atomic.StoreInt64(&c.sessionID, int64(0))
+		c.sessionID = 0
 		c.passwd = make([]byte, 16)
 		c.lastZxid = 0
 		return ErrSessionExpired
 	}
 
-	atomic.StoreInt64(&c.sessionID, response.SessionId)
+	c.sessionID = response.SessionId
 	c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
 	c.passwd = response.Passwd
 
