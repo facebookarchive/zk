@@ -14,6 +14,7 @@ func TestCreateServer(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error while initializing zk server: %v", err)
 	}
+	defer server.Shutdown()
 
 	// run ZK in separate goroutine
 	if err = server.Run(); err != nil {
@@ -26,5 +27,4 @@ func TestCreateServer(t *testing.T) {
 	if len(oks) < 1 || !oks[0] {
 		t.Errorf("ruok indicates server is running in an error state")
 	}
-	server.Shutdown()
 }

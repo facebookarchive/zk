@@ -14,13 +14,13 @@ func TestAuthentication(t *testing.T) {
 	if err != nil {
 		t.Errorf("unexpected error while initializing zk server: %v", err)
 	}
+	defer server.Shutdown()
 
 	// run ZK in separate goroutine
 	if err = server.Run(); err != nil {
 		t.Errorf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
-	defer server.Shutdown()
 
 	// attempt to authenticate against server
 	client, err := Connect([]string{"127.0.0.1"})
