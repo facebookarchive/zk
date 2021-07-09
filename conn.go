@@ -86,7 +86,7 @@ func (c *Connection) authenticate() error {
 	copy(sendSlice[4:], sendBuf.Bytes())
 	binary.BigEndian.PutUint32(sendSlice[:4], uint32(requestLen))
 
-	// send request bytes from sendSlicevia net.conn
+	// send request bytes from sendSlice via net.conn
 	c.conn.SetWriteDeadline(time.Now().Add(c.sessionTimeout))
 	c.conn.Write(sendSlice[:requestLen+4])
 	c.conn.SetWriteDeadline(time.Time{})
@@ -100,8 +100,14 @@ func (c *Connection) authenticate() error {
 		return err
 	}
 
-	responseLength := int(binary.BigEndian.Uint32(recvBuf[:4]))
-	if cap(recvBuf) < responseLength {
+	recvReader := bytes.NewReader(recvBuf)
+	dec := jute.NewBinaryDecoder(recvReader)
+
+	responseLength, err := dec.ReadInt()
+	if err != nil {
+		return err
+	}
+	if cap(recvBuf) < int(responseLength) {
 		recvBuf = make([]byte, responseLength)
 	}
 
@@ -109,9 +115,10 @@ func (c *Connection) authenticate() error {
 	if err != nil {
 		return err
 	}
+
 	response := proto.ConnectResponse{}
-	recvReader := bytes.NewReader(recvBuf)
-	dec := jute.NewBinaryDecoder(recvReader)
+	recvReader = bytes.NewReader(recvBuf)
+	dec = jute.NewBinaryDecoder(recvReader)
 	if err = response.Read(dec); err != nil {
 		return err
 	}
