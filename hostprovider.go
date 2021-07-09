@@ -1,4 +1,4 @@
-package hostprovider
+package zk
 
 // HostProvider represents a set of hosts a ZooKeeper client should connect to.
 type HostProvider interface {
