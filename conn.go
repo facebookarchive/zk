@@ -3,18 +3,28 @@ package zk
 import (
 	"bytes"
 	"errors"
+	"math"
 	"net"
 	"time"
 
 	"github.com/facebookincubator/zk/flw"
+	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
+
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
-const defaultProtocolVersion = 0
+const (
+	defaultProtocolVersion = 0
+	opGetData              = 4
+)
 
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
+
+type JuteWriter interface {
+	Write(enc jute.Encoder) error
+}
 
 type Connection struct {
 	provider       HostProvider
@@ -24,6 +34,7 @@ type Connection struct {
 	sessionID      int64
 	passwd         []byte
 	server         string
+	xid            int32
 }
 
 func Connect(servers []string) (*Connection, error) {
@@ -51,6 +62,15 @@ func Connect(servers []string) (*Connection, error) {
 	return conn, nil
 }
 
+func (c *Connection) getXid() int32 {
+	if c.xid == math.MaxInt32 {
+		c.xid = 1
+	}
+	c.xid++
+
+	return c.xid
+}
+
 func (c *Connection) dial() error {
 	c.server, _ = c.provider.Next()
 	conn, err := net.Dial("tcp", c.server)
@@ -64,36 +84,27 @@ func (c *Connection) dial() error {
 }
 
 func (c *Connection) authenticate() error {
-	sendBuf := &bytes.Buffer{}
-
 	// create and encode request for zk server
-	request := proto.ConnectRequest{
+	request := &proto.ConnectRequest{
 		ProtocolVersion: defaultProtocolVersion,
 		LastZxidSeen:    c.lastZxid,
 		TimeOut:         int32(c.sessionTimeout.Milliseconds()),
 		SessionId:       c.sessionID,
 		Passwd:          c.passwd,
 	}
-	enc := jute.NewBinaryEncoder(sendBuf)
-	if err := request.Write(enc); err != nil {
+
+	sendBuf, err := serializeWriters(request)
+	if err != nil {
 		return err
 	}
 
-	// copy encoded request bytes
-	requestBytes := append([]byte(nil), sendBuf.Bytes()...)
-
-	// use encoder to prepend request length to the request bytes
-	sendBuf.Reset()
-	enc.WriteBuffer(requestBytes)
-	enc.WriteEnd()
-
 	// send request payload via net.conn
-	c.conn.Write(sendBuf.Bytes())
+	c.conn.Write(sendBuf)
 
 	// receive bytes from same socket, reading the message length first
 	dec := jute.NewBinaryDecoder(c.conn)
 
-	_, err := dec.ReadInt() // read response length
+	_, err = dec.ReadInt() // read response length
 	if err != nil {
 		return err
 	}
@@ -114,4 +125,59 @@ func (c *Connection) authenticate() error {
 	c.passwd = response.Passwd
 
 	return nil
+}
+
+func (c *Connection) GetData(path string) (*proto.GetDataResponse, error) {
+	header := &proto.RequestHeader{
+		Xid:  c.getXid(),
+		Type: opGetData,
+	}
+	request := &proto.GetDataRequest{
+		Path:  path,
+		Watch: false,
+	}
+	sendBuf, err := serializeWriters(header, request)
+
+	c.conn.Write(sendBuf)
+
+	dec := jute.NewBinaryDecoder(c.conn)
+	_, err = dec.ReadInt() // read response length
+	if err != nil {
+		return nil, err
+	}
+	replyHeader := &proto.ReplyHeader{}
+	if err = dec.ReadRecord(replyHeader); err != nil {
+		return nil, err
+	}
+	response := &proto.GetDataResponse{
+		Data: nil,
+		Stat: &data.Stat{},
+	}
+	if err = dec.ReadRecord(response); err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+// serializeWriters takes in one or more JuteWriter instances, and serializes them to a byte array
+// while also prepending the total length of the structures to the beginning of the array.
+func serializeWriters(generated ...JuteWriter) ([]byte, error) {
+	sendBuf := &bytes.Buffer{}
+	enc := jute.NewBinaryEncoder(sendBuf)
+
+	for _, generatedStruct := range generated {
+		if err := generatedStruct.Write(enc); err != nil {
+			return nil, err
+		}
+	}
+	// copy encoded request bytes
+	requestBytes := append([]byte(nil), sendBuf.Bytes()...)
+
+	// use encoder to prepend request length to the request bytes
+	sendBuf.Reset()
+	enc.WriteBuffer(requestBytes)
+	enc.WriteEnd()
+
+	return sendBuf.Bytes(), nil
 }
