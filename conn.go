@@ -3,6 +3,7 @@ package zk
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"net"
 	"time"
@@ -75,7 +76,7 @@ func (c *Connection) dial() error {
 	c.server, _ = c.provider.Next()
 	conn, err := net.Dial("tcp", c.server)
 	if err != nil {
-		return err
+		return fmt.Errorf("error dialing ZK server: %v", err)
 	}
 
 	c.conn = conn
@@ -95,7 +96,7 @@ func (c *Connection) authenticate() error {
 
 	sendBuf, err := serializeWriters(request)
 	if err != nil {
-		return err
+		return fmt.Errorf("error serializing request: %v", err)
 	}
 
 	// send request payload via net.conn
@@ -106,11 +107,11 @@ func (c *Connection) authenticate() error {
 
 	_, err = dec.ReadInt() // read response length
 	if err != nil {
-		return err
+		return fmt.Errorf("could not decode response length: %v", err)
 	}
 	response := proto.ConnectResponse{}
 	if err = response.Read(dec); err != nil {
-		return err
+		return fmt.Errorf("could not decode response struct: %v", err)
 	}
 
 	if response.SessionId == 0 {
@@ -143,18 +144,18 @@ func (c *Connection) GetData(path string) (*proto.GetDataResponse, error) {
 	dec := jute.NewBinaryDecoder(c.conn)
 	_, err = dec.ReadInt() // read response length
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode response length: %v", err)
 	}
 	replyHeader := &proto.ReplyHeader{}
 	if err = dec.ReadRecord(replyHeader); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode response struct: %v", err)
 	}
 	response := &proto.GetDataResponse{
 		Data: nil,
 		Stat: &data.Stat{},
 	}
 	if err = dec.ReadRecord(response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode response struct: %v", err)
 	}
 
 	return response, nil
@@ -168,7 +169,7 @@ func serializeWriters(generated ...JuteWriter) ([]byte, error) {
 
 	for _, generatedStruct := range generated {
 		if err := generatedStruct.Write(enc); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not encode struct: %v", err)
 		}
 	}
 	// copy encoded request bytes
