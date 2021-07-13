@@ -118,7 +118,7 @@ func (c *Connection) authenticate() error {
 	return nil
 }
 
-func (c *Connection) GetData(path string) (*proto.GetDataResponse, error) {
+func (c *Connection) GetData(path string) ([]byte, error) {
 	header := &proto.RequestHeader{
 		Xid:  c.getXid(),
 		Type: opGetData,
@@ -148,5 +148,5 @@ func (c *Connection) GetData(path string) (*proto.GetDataResponse, error) {
 		return nil, fmt.Errorf("could not decode response struct: %v", err)
 	}
 
-	return response, nil
+	return response.Data, nil
 }
