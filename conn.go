@@ -23,10 +23,6 @@ const (
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
-type JuteWriter interface {
-	Write(enc jute.Encoder) error
-}
-
 type Connection struct {
 	provider       HostProvider
 	conn           net.Conn
@@ -161,9 +157,9 @@ func (c *Connection) GetData(path string) (*proto.GetDataResponse, error) {
 	return response, nil
 }
 
-// serializeWriters takes in one or more JuteWriter instances, and serializes them to a byte array
+// serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
 // while also prepending the total length of the structures to the beginning of the array.
-func serializeWriters(generated ...JuteWriter) ([]byte, error) {
+func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 	sendBuf := &bytes.Buffer{}
 	enc := jute.NewBinaryEncoder(sendBuf)
 
