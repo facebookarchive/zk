@@ -1,7 +1,6 @@
 package zk
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -13,11 +12,6 @@ import (
 	"github.com/facebookincubator/zk/internal/proto"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
-)
-
-const (
-	defaultProtocolVersion = 0
-	opGetData              = 4
 )
 
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
@@ -155,26 +149,4 @@ func (c *Connection) GetData(path string) (*proto.GetDataResponse, error) {
 	}
 
 	return response, nil
-}
-
-// serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
-// while also prepending the total length of the structures to the beginning of the array.
-func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
-	sendBuf := &bytes.Buffer{}
-	enc := jute.NewBinaryEncoder(sendBuf)
-
-	for _, generatedStruct := range generated {
-		if err := generatedStruct.Write(enc); err != nil {
-			return nil, fmt.Errorf("could not encode struct: %v", err)
-		}
-	}
-	// copy encoded request bytes
-	requestBytes := append([]byte(nil), sendBuf.Bytes()...)
-
-	// use encoder to prepend request length to the request bytes
-	sendBuf.Reset()
-	enc.WriteBuffer(requestBytes)
-	enc.WriteEnd()
-
-	return sendBuf.Bytes(), nil
 }
