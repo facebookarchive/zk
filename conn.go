@@ -3,8 +3,10 @@ package zk
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/facebookincubator/zk/flw"
@@ -18,21 +20,24 @@ var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
 type Connection struct {
-	provider       HostProvider
-	conn           net.Conn
-	lastZxid       int64
-	sessionTimeout time.Duration
-	sessionID      int64
-	passwd         []byte
-	server         string
-	xid            int32
+	provider        HostProvider
+	conn            net.Conn
+	lastZxid        int64
+	sessionTimeout  time.Duration
+	sessionID       int64
+	passwd          []byte
+	server          string
+	xid             int32
+	pendingRequests map[int32]chan jute.Decoder
+	pendingMutex    sync.Mutex
 }
 
 func Connect(servers []string) (*Connection, error) {
 	conn := &Connection{
-		provider:       &DNSHostProvider{},
-		sessionTimeout: time.Second,
-		passwd:         emptyPassword,
+		provider:        &DNSHostProvider{},
+		sessionTimeout:  time.Second,
+		passwd:          emptyPassword,
+		pendingRequests: make(map[int32]chan jute.Decoder),
 	}
 
 	err := conn.provider.Init(flw.FormatServers(servers))
@@ -49,6 +54,8 @@ func Connect(servers []string) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	go conn.handleReads()
 
 	return conn, nil
 }
@@ -128,25 +135,55 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 		Watch: false,
 	}
 	sendBuf, err := serializeWriters(header, request)
+	if err != nil {
+		return nil, fmt.Errorf("error serializing request: %v", err)
+	}
+
+	requestChan := make(chan jute.Decoder)
+	c.pendingMutex.Lock()
+	c.pendingRequests[header.Xid] = requestChan
+	c.pendingMutex.Unlock()
 
 	c.conn.Write(sendBuf)
 
-	dec := jute.NewBinaryDecoder(c.conn)
-	_, err = dec.ReadInt() // read response length
-	if err != nil {
-		return nil, fmt.Errorf("could not decode response length: %v", err)
-	}
-	replyHeader := &proto.ReplyHeader{}
-	if err = dec.ReadRecord(replyHeader); err != nil {
-		return nil, fmt.Errorf("could not decode response struct: %v", err)
-	}
-	response := &proto.GetDataResponse{
-		Data: nil,
-		Stat: &data.Stat{},
-	}
-	if err = dec.ReadRecord(response); err != nil {
-		return nil, fmt.Errorf("could not decode response struct: %v", err)
-	}
+	select {
+	case response := <-requestChan:
+		getDataResponse := &proto.GetDataResponse{
+			Data: nil,
+			Stat: &data.Stat{},
+		}
+		if err = response.ReadRecord(getDataResponse); err != nil {
+			return nil, fmt.Errorf("could not decode response struct: %v", err)
+		}
 
-	return response.Data, nil
+		return getDataResponse.Data, nil
+	case <-time.After(c.sessionTimeout):
+		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
+	}
+}
+
+func (c *Connection) handleReads() {
+	for {
+		dec := jute.NewBinaryDecoder(c.conn)
+		_, err := dec.ReadInt() // read response length
+		if err != nil {
+			// TODO: perhaps logrus (or similar) with debug logging should be used here
+			log.Printf("could not decode response length: %v", err)
+			continue
+		}
+		replyHeader := &proto.ReplyHeader{}
+		if err = dec.ReadRecord(replyHeader); err != nil {
+			log.Printf("could not decode response struct: %v", err)
+			continue
+		}
+
+		c.pendingMutex.Lock()
+		requestChan, ok := c.pendingRequests[replyHeader.Xid]
+		if ok {
+			delete(c.pendingRequests, replyHeader.Xid)
+		}
+		c.pendingMutex.Unlock()
+
+		requestChan <- dec
+	}
 }
