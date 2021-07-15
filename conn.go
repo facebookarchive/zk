@@ -29,16 +29,14 @@ type Connection struct {
 	passwd          []byte
 	server          string
 	xid             int32
-	pendingRequests map[int32]pendingRequest
-	pendingMutex    sync.Mutex
+	pendingRequests sync.Map
 }
 
 func Connect(servers []string) (*Connection, error) {
 	conn := &Connection{
-		provider:        &DNSHostProvider{},
-		sessionTimeout:  time.Second,
-		passwd:          emptyPassword,
-		pendingRequests: make(map[int32]pendingRequest),
+		provider:       &DNSHostProvider{},
+		sessionTimeout: time.Second,
+		passwd:         emptyPassword,
 	}
 
 	err := conn.provider.Init(flw.FormatServers(servers))
@@ -148,9 +146,7 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 		done:  make(chan struct{}, 1),
 	}
 
-	c.pendingMutex.Lock()
-	c.pendingRequests[header.Xid] = pending
-	c.pendingMutex.Unlock()
+	c.pendingRequests.Store(header.Xid, pending)
 
 	c.conn.Write(sendBuf)
 
@@ -167,7 +163,7 @@ func (c *Connection) handleReads() {
 		dec := jute.NewBinaryDecoder(c.conn)
 		_, err := dec.ReadInt() // read response length
 		if errors.Is(err, io.EOF) {
-			continue // no incoming responses on the connection, ignore
+			continue // TODO - instead of ignoring the EOF, we can use a more sophisticated approach with timeouts
 		}
 		if err != nil {
 			log.Printf("could not decode response length: %v", err)
@@ -180,17 +176,15 @@ func (c *Connection) handleReads() {
 			continue
 		}
 
-		c.pendingMutex.Lock()
-		pending, ok := c.pendingRequests[replyHeader.Xid]
-		if ok {
-			delete(c.pendingRequests, replyHeader.Xid)
-		}
-		c.pendingMutex.Unlock()
-		if err = dec.ReadRecord(pending.reply); err != nil {
-			log.Printf("could not decode response struct: %v", err)
-			continue
-		}
+		value, present := c.pendingRequests.LoadAndDelete(replyHeader.Xid)
+		if present {
+			pending := value.(pendingRequest)
+			if err = dec.ReadRecord(pending.reply); err != nil {
+				log.Printf("could not decode response struct: %v", err)
+				continue
+			}
 
-		pending.done <- struct{}{}
+			pending.done <- struct{}{}
+		}
 	}
 }
