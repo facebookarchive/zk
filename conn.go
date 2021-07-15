@@ -3,6 +3,7 @@ package zk
 import (
 	"errors"
 	"fmt"
+	"github.com/facebookincubator/zk/internal/data"
 	"log"
 	"math"
 	"net"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/flw"
-	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -18,6 +18,11 @@ import (
 
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
+
+type pendingRequest struct {
+	reply jute.RecordReader
+	done  chan struct{}
+}
 
 type Connection struct {
 	provider        HostProvider
@@ -28,7 +33,7 @@ type Connection struct {
 	passwd          []byte
 	server          string
 	xid             int32
-	pendingRequests map[int32]chan jute.Decoder
+	pendingRequests map[int32]pendingRequest
 	pendingMutex    sync.Mutex
 }
 
@@ -37,7 +42,7 @@ func Connect(servers []string) (*Connection, error) {
 		provider:        &DNSHostProvider{},
 		sessionTimeout:  time.Second,
 		passwd:          emptyPassword,
-		pendingRequests: make(map[int32]chan jute.Decoder),
+		pendingRequests: make(map[int32]pendingRequest),
 	}
 
 	err := conn.provider.Init(flw.FormatServers(servers))
@@ -138,25 +143,24 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
+	getDataReply := &proto.GetDataResponse{
+		Data: nil,
+		Stat: &data.Stat{},
+	}
+	pending := pendingRequest{
+		reply: getDataReply,
+		done:  make(chan struct{}, 1),
+	}
 
-	requestChan := make(chan jute.Decoder)
 	c.pendingMutex.Lock()
-	c.pendingRequests[header.Xid] = requestChan
+	c.pendingRequests[header.Xid] = pending
 	c.pendingMutex.Unlock()
 
 	c.conn.Write(sendBuf)
 
 	select {
-	case response := <-requestChan:
-		getDataResponse := &proto.GetDataResponse{
-			Data: nil,
-			Stat: &data.Stat{},
-		}
-		if err = response.ReadRecord(getDataResponse); err != nil {
-			return nil, fmt.Errorf("could not decode response struct: %v", err)
-		}
-
-		return getDataResponse.Data, nil
+	case <-pending.done:
+		return getDataReply.Data, nil
 	case <-time.After(c.sessionTimeout):
 		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}
@@ -178,12 +182,16 @@ func (c *Connection) handleReads() {
 		}
 
 		c.pendingMutex.Lock()
-		requestChan, ok := c.pendingRequests[replyHeader.Xid]
+		pending, ok := c.pendingRequests[replyHeader.Xid]
 		if ok {
 			delete(c.pendingRequests, replyHeader.Xid)
 		}
 		c.pendingMutex.Unlock()
+		if err = dec.ReadRecord(pending.reply); err != nil {
+			log.Printf("could not decode response struct: %v", err)
+			continue
+		}
 
-		requestChan <- dec
+		pending.done <- struct{}{}
 	}
 }
