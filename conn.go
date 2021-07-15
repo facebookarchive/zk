@@ -3,6 +3,7 @@ package zk
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net"
@@ -165,11 +166,14 @@ func (c *Connection) handleReads() {
 	for {
 		dec := jute.NewBinaryDecoder(c.conn)
 		_, err := dec.ReadInt() // read response length
+		if errors.Is(err, io.EOF) {
+			continue // no incoming responses on the connection, ignore
+		}
 		if err != nil {
-			// TODO: perhaps logrus (or similar) with debug logging should be used here
 			log.Printf("could not decode response length: %v", err)
 			continue
 		}
+
 		replyHeader := &proto.ReplyHeader{}
 		if err = dec.ReadRecord(replyHeader); err != nil {
 			log.Printf("could not decode response struct: %v", err)
