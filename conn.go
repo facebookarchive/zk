@@ -137,12 +137,12 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
-	getDataReply := &proto.GetDataResponse{
+	r := &proto.GetDataResponse{
 		Data: nil,
 		Stat: &data.Stat{},
 	}
 	pending := pendingRequest{
-		reply: getDataReply,
+		reply: r,
 		done:  make(chan struct{}, 1),
 	}
 
@@ -152,7 +152,7 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 
 	select {
 	case <-pending.done:
-		return getDataReply.Data, nil
+		return r.Data, nil
 	case <-time.After(c.sessionTimeout):
 		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}
