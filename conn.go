@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/flw"
+	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
 
-	"github.com/facebookincubator/zk/internal/data"
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
