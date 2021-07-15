@@ -3,7 +3,6 @@ package zk
 import (
 	"errors"
 	"fmt"
-	"github.com/facebookincubator/zk/internal/data"
 	"log"
 	"math"
 	"net"
@@ -13,16 +12,12 @@ import (
 	"github.com/facebookincubator/zk/flw"
 	"github.com/facebookincubator/zk/internal/proto"
 
+	"github.com/facebookincubator/zk/internal/data"
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
-
-type pendingRequest struct {
-	reply jute.RecordReader
-	done  chan struct{}
-}
 
 type Connection struct {
 	provider        HostProvider

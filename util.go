@@ -7,6 +7,11 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
+type pendingRequest struct {
+	reply jute.RecordReader
+	done  chan struct{}
+}
+
 // serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
 // while also prepending the total length of the structures to the beginning of the array.
 func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
