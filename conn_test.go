@@ -24,7 +24,9 @@ func TestAuthentication(t *testing.T) {
 	}
 
 	// attempt to authenticate against server
-	client, err := Connect([]string{"127.0.0.1"}, time.Second)
+	client, cancel, err := Connect([]string{"127.0.0.1"}, time.Second)
+	defer cancel()
+
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -47,7 +49,8 @@ func TestGetDataWorks(t *testing.T) {
 		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
-	client, err := Connect([]string{"127.0.0.1"}, time.Second)
+	client, cancel, err := Connect([]string{"127.0.0.1"}, time.Second)
+	defer cancel()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -32,7 +33,7 @@ type Connection struct {
 	pendingRequests sync.Map
 }
 
-func Connect(servers []string, timeout time.Duration) (*Connection, error) {
+func Connect(servers []string, timeout time.Duration) (*Connection, context.CancelFunc, error) {
 	conn := &Connection{
 		provider:       &DNSHostProvider{},
 		sessionTimeout: timeout,
@@ -42,22 +43,25 @@ func Connect(servers []string, timeout time.Duration) (*Connection, error) {
 
 	err := conn.provider.Init(flw.FormatServers(servers))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = conn.dial()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = conn.authenticate()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	go conn.handleReads()
-	go conn.handleSession()
-	return conn, nil
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go conn.handleReads(ctx)
+	go conn.handleSession(ctx)
+
+	return conn, cancel, nil
 }
 
 func (c *Connection) getXid() int32 {
@@ -159,30 +163,63 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 	}
 }
 
-func (c *Connection) handleReads() {
+func (c *Connection) handleReads(ctx context.Context) {
 	for {
-		dec := jute.NewBinaryDecoder(c.conn)
-		_, err := dec.ReadInt() // read response length
-		if err != nil {
-			log.Printf("could not decode response length: %v", err)
-			break
-		}
-
-		replyHeader := &proto.ReplyHeader{}
-		if err = dec.ReadRecord(replyHeader); err != nil {
-			log.Printf("could not decode response struct: %v", err)
-			break
-		}
-
-		value, present := c.pendingRequests.LoadAndDelete(replyHeader.Xid)
-		if present {
-			pending := value.(pendingRequest)
-			if err = dec.ReadRecord(pending.reply); err != nil {
-				log.Printf("could not decode response struct: %v", err)
+		select {
+		case <-ctx.Done():
+			// clear pending requests map
+			c.pendingRequests.Range(func(key, value interface{}) bool {
+				c.pendingRequests.Delete(key)
+				return true
+			})
+			c.conn.Close()
+			return
+		default:
+			dec := jute.NewBinaryDecoder(c.conn)
+			_, err := dec.ReadInt() // read response length
+			if err != nil {
+				log.Printf("could not decode response length: %v", err)
 				break
 			}
 
-			pending.done <- struct{}{}
+			replyHeader := &proto.ReplyHeader{}
+			if err = dec.ReadRecord(replyHeader); err != nil {
+				log.Printf("could not decode response struct: %v", err)
+				break
+			}
+			if replyHeader.Xid == pingXID {
+				continue // ignore ping responses
+			}
+
+			value, present := c.pendingRequests.LoadAndDelete(replyHeader.Xid)
+			if present {
+				pending := value.(pendingRequest)
+				if err = dec.ReadRecord(pending.reply); err != nil {
+					log.Printf("could not decode response struct: %v", err)
+					break
+				}
+
+				pending.done <- struct{}{}
+			}
+		}
+	}
+}
+
+func (c *Connection) handleSession(ctx context.Context) {
+	pingTicker := time.NewTicker(c.pingInterval)
+	defer pingTicker.Stop()
+
+	for {
+		select {
+		case <-pingTicker.C:
+			header := &proto.RequestHeader{
+				Xid:  pingXID,
+				Type: opPing,
+			}
+			sendBuf, _ := serializeWriters(header)
+			c.conn.Write(sendBuf)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
