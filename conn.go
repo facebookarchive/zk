@@ -3,7 +3,6 @@ package zk
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net"
@@ -162,18 +161,15 @@ func (c *Connection) handleReads() {
 	for {
 		dec := jute.NewBinaryDecoder(c.conn)
 		_, err := dec.ReadInt() // read response length
-		if errors.Is(err, io.EOF) {
-			continue // TODO - instead of ignoring the EOF, we can use a more sophisticated approach with timeouts
-		}
 		if err != nil {
 			log.Printf("could not decode response length: %v", err)
-			continue
+			break
 		}
 
 		replyHeader := &proto.ReplyHeader{}
 		if err = dec.ReadRecord(replyHeader); err != nil {
 			log.Printf("could not decode response struct: %v", err)
-			continue
+			break
 		}
 
 		value, present := c.pendingRequests.LoadAndDelete(replyHeader.Xid)
@@ -181,7 +177,7 @@ func (c *Connection) handleReads() {
 			pending := value.(pendingRequest)
 			if err = dec.ReadRecord(pending.reply); err != nil {
 				log.Printf("could not decode response struct: %v", err)
-				continue
+				break
 			}
 
 			pending.done <- struct{}{}
