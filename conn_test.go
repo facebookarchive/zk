@@ -2,6 +2,7 @@ package zk
 
 import (
 	"testing"
+	"time"
 
 	"github.com/facebookincubator/zk/integration"
 )
@@ -23,7 +24,7 @@ func TestAuthentication(t *testing.T) {
 	}
 
 	// attempt to authenticate against server
-	client, err := Connect([]string{"127.0.0.1"})
+	client, err := Connect([]string{"127.0.0.1"}, time.Second)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -46,7 +47,7 @@ func TestGetDataWorks(t *testing.T) {
 		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
-	client, err := Connect([]string{"127.0.0.1"})
+	client, err := Connect([]string{"127.0.0.1"}, time.Second)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
