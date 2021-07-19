@@ -42,7 +42,6 @@ func Connect(servers []string, timeout time.Duration) (*Connection, error) {
 		sessionTimeout: timeout,
 		passwd:         emptyPassword,
 	}
-	conn.pingInterval = conn.sessionTimeout / 2
 
 	err := conn.provider.Init(flw.FormatServers(servers))
 	if err != nil {
@@ -127,6 +126,9 @@ func (c *Connection) authenticate() error {
 
 	c.sessionID = response.SessionId
 	c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
+
+	// set the ping interval to half of the session timeout, according to Zookeeper documentation
+	c.pingInterval = c.sessionTimeout / 2
 	c.passwd = response.Passwd
 
 	return nil
