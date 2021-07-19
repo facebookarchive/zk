@@ -236,7 +236,10 @@ func (c *Connection) keepAlive(ctx context.Context) {
 				log.Printf("error serializing ping request: %v", err)
 				continue
 			}
-			c.conn.Write(sendBuf)
+			if _, err = c.conn.Write(sendBuf); err != nil {
+				log.Printf("error writing ping request to net.conn: %v", err)
+				continue
+			}
 		case <-ctx.Done():
 			return
 		}
