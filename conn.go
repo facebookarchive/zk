@@ -103,7 +103,9 @@ func (c *Connection) authenticate() error {
 	}
 
 	// send request payload via net.conn
-	c.conn.Write(sendBuf)
+	if _, err = c.conn.Write(sendBuf); err != nil {
+		return fmt.Errorf("error writing authentication request to net.conn: %v", err)
+	}
 
 	// receive bytes from same socket, reading the message length first
 	dec := jute.NewBinaryDecoder(c.conn)
@@ -158,7 +160,9 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 
 	c.reqs.Store(header.Xid, pending)
 
-	c.conn.Write(sendBuf)
+	if _, err = c.conn.Write(sendBuf); err != nil {
+		return nil, fmt.Errorf("error writing GetData request to net.conn: %v", err)
+	}
 
 	select {
 	case <-pending.done:
