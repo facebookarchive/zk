@@ -25,11 +25,10 @@ func TestAuthentication(t *testing.T) {
 
 	// attempt to authenticate against server
 	client, err := Connect([]string{"127.0.0.1"}, time.Second)
-	defer client.Close()
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer client.Close()
 
 	if client.sessionID == 0 {
 		t.Errorf("expected non-zero session ID")
@@ -50,10 +49,10 @@ func TestGetDataWorks(t *testing.T) {
 		return
 	}
 	client, err := Connect([]string{"127.0.0.1"}, time.Second)
-	defer client.Close()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	defer client.Close()
 
 	_, err = client.GetData("/")
 	if err != nil {
