@@ -62,7 +62,7 @@ func Connect(servers []string, timeout time.Duration) (*Connection, error) {
 	conn.cancelFunc = cancel
 
 	go conn.handleReads(ctx)
-	go conn.handleSession(ctx)
+	go conn.keepAlive(ctx)
 
 	return conn, nil
 }
@@ -190,8 +190,8 @@ func (c *Connection) handleReads(ctx context.Context) {
 				continue // ignore ping responses
 			}
 
-			value, present := c.pendingRequests.LoadAndDelete(replyHeader.Xid)
-			if present {
+			value, ok := c.pendingRequests.LoadAndDelete(replyHeader.Xid)
+			if ok {
 				pending := value.(pendingRequest)
 				if err = dec.ReadRecord(pending.reply); err != nil {
 					log.Printf("could not decode response struct: %v", err)
@@ -204,7 +204,7 @@ func (c *Connection) handleReads(ctx context.Context) {
 	}
 }
 
-func (c *Connection) handleSession(ctx context.Context) {
+func (c *Connection) keepAlive(ctx context.Context) {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
 
