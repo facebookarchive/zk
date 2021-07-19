@@ -31,9 +31,10 @@ type Connection struct {
 	server          string // the server IP to which the client is currently connected
 	xid             int32  // client-side request ID
 	pendingRequests sync.Map
+	cancelFunc      context.CancelFunc
 }
 
-func Connect(servers []string, timeout time.Duration) (*Connection, context.CancelFunc, error) {
+func Connect(servers []string, timeout time.Duration) (*Connection, error) {
 	conn := &Connection{
 		provider:       &DNSHostProvider{},
 		sessionTimeout: timeout,
@@ -43,25 +44,26 @@ func Connect(servers []string, timeout time.Duration) (*Connection, context.Canc
 
 	err := conn.provider.Init(flw.FormatServers(servers))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = conn.dial()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	err = conn.authenticate()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	conn.cancelFunc = cancel
 
 	go conn.handleReads(ctx)
 	go conn.handleSession(ctx)
 
-	return conn, cancel, nil
+	return conn, nil
 }
 
 func (c *Connection) getXid() int32 {
@@ -71,6 +73,13 @@ func (c *Connection) getXid() int32 {
 	c.xid++
 
 	return c.xid
+}
+
+func (c *Connection) Close() error {
+	c.cancelFunc()
+	c.clearPendingRequests()
+
+	return c.conn.Close()
 }
 
 func (c *Connection) dial() error {
@@ -167,12 +176,6 @@ func (c *Connection) handleReads(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			// clear pending requests map
-			c.pendingRequests.Range(func(key, value interface{}) bool {
-				c.pendingRequests.Delete(key)
-				return true
-			})
-			c.conn.Close()
 			return
 		default:
 			dec := jute.NewBinaryDecoder(c.conn)
@@ -222,4 +225,11 @@ func (c *Connection) handleSession(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (c *Connection) clearPendingRequests() {
+	c.pendingRequests.Range(func(key, value interface{}) bool {
+		c.pendingRequests.Delete(key)
+		return true
+	})
 }
