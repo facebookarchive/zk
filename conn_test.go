@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -54,8 +55,9 @@ func TestGetDataWorks(t *testing.T) {
 	}
 	defer client.Close()
 
-	_, err = client.GetData("/")
+	res, err := client.GetData("/")
 	if err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
+	log.Printf("getData response: %+v", res)
 }
