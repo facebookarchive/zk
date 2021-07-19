@@ -2,5 +2,9 @@ package zk
 
 const (
 	defaultProtocolVersion = 0
-	opGetData              = 4
+
+	pingXID = -2
+
+	opPing    = 11
+	opGetData = 4
 )
