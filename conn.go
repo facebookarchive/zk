@@ -219,7 +219,11 @@ func (c *Connection) keepAlive(ctx context.Context) {
 				Xid:  pingXID,
 				Type: opPing,
 			}
-			sendBuf, _ := serializeWriters(header)
+			sendBuf, err := serializeWriters(header)
+			if err != nil {
+				log.Printf("error serializing ping request: %v", err)
+				continue
+			}
 			c.conn.Write(sendBuf)
 		case <-ctx.Done():
 			return
