@@ -34,6 +34,8 @@ type Connection struct {
 	cancelFunc      context.CancelFunc
 }
 
+// Connect connects the ZK client to the specified pool of Zookeeper servers with a desired timeout.
+// The session will be considered valid after losing connection to the server based on the provided timeout.
 func Connect(servers []string, timeout time.Duration) (*Connection, error) {
 	conn := &Connection{
 		provider:       &DNSHostProvider{},
@@ -66,15 +68,7 @@ func Connect(servers []string, timeout time.Duration) (*Connection, error) {
 	return conn, nil
 }
 
-func (c *Connection) getXid() int32 {
-	if c.xid == math.MaxInt32 {
-		c.xid = 1
-	}
-	c.xid++
-
-	return c.xid
-}
-
+// Close closes the client connection, clearing all pending requests.
 func (c *Connection) Close() error {
 	c.cancelFunc()
 	c.clearPendingRequests()
@@ -232,4 +226,13 @@ func (c *Connection) clearPendingRequests() {
 		c.pendingRequests.Delete(key)
 		return true
 	})
+}
+
+func (c *Connection) getXid() int32 {
+	if c.xid == math.MaxInt32 {
+		c.xid = 1
+	}
+	c.xid++
+
+	return c.xid
 }
