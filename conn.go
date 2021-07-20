@@ -47,7 +47,7 @@ type Connection struct {
 	cancelFunc context.CancelFunc
 }
 
-// Connect connects the ZK client to the specified pool of Zookeeper servers with a desired timeout.
+// Connect the ZK client to the specified pool of Zookeeper servers with a desired timeout.
 // The session will be considered valid after losing connection to the server based on the provided timeout.
 func Connect(servers []string, timeout time.Duration, options ...ConnOption) (*Connection, error) {
 	conn := &Connection{
