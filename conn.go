@@ -21,8 +21,9 @@ var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
 type Connection struct {
-	provider HostProvider
 	conn     net.Conn
+	dialer   Dialer
+	provider HostProvider
 
 	// the server IP to which the client is currently connected
 	server string
@@ -48,11 +49,16 @@ type Connection struct {
 
 // Connect connects the ZK client to the specified pool of Zookeeper servers with a desired timeout.
 // The session will be considered valid after losing connection to the server based on the provided timeout.
-func Connect(servers []string, timeout time.Duration) (*Connection, error) {
+func Connect(servers []string, timeout time.Duration, options ...ConnOption) (*Connection, error) {
 	conn := &Connection{
+		dialer:         net.DialTimeout,
 		provider:       &DNSHostProvider{},
 		sessionTimeout: timeout,
 		passwd:         emptyPassword,
+	}
+
+	for _, option := range options {
+		option(conn)
 	}
 
 	err := conn.provider.Init(flw.FormatServers(servers))
@@ -89,7 +95,7 @@ func (c *Connection) Close() error {
 
 func (c *Connection) dial() error {
 	c.server, _ = c.provider.Next()
-	conn, err := net.Dial("tcp", c.server)
+	conn, err := c.dialer("tcp", c.server, c.sessionTimeout)
 	if err != nil {
 		return fmt.Errorf("error dialing ZK server: %v", err)
 	}
