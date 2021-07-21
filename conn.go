@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/facebookincubator/zk/flw"
 	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
 
@@ -20,12 +19,8 @@ import (
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
-type Connection struct {
-	provider HostProvider
-	conn     net.Conn
-
-	// the server IP to which the client is currently connected
-	server string
+type Conn struct {
+	conn net.Conn
 
 	// client-side request ID
 	xid int32
@@ -46,60 +41,57 @@ type Connection struct {
 	cancelFunc context.CancelFunc
 }
 
-// Connect connects the ZK client to the specified pool of Zookeeper servers with a desired timeout.
-// The session will be considered valid after losing connection to the server based on the provided timeout.
-func Connect(servers []string, timeout time.Duration) (*Connection, error) {
-	conn := &Connection{
-		provider:       &DNSHostProvider{},
-		sessionTimeout: timeout,
-		passwd:         emptyPassword,
+// DialContext connects to the ZK server using the default client.
+func DialContext(ctx context.Context, network, address string) (*Conn, error) {
+	defaultClient := Client{}
+	return defaultClient.DialContext(ctx, network, address)
+}
+
+// DialContext connects the ZK client to the specified Zookeeper server.
+// The provided context is used to determine the lifetime of the session.
+func (client *Client) DialContext(ctx context.Context, network, address string) (*Conn, error) {
+	c := &Conn{
+		passwd: emptyPassword,
 	}
 
-	err := conn.provider.Init(flw.FormatServers(servers))
+	if client.Dialer == nil {
+		defaultDialer := &net.Dialer{}
+		client.Dialer = defaultDialer.DialContext
+	}
+
+	sessionCtx, cancel := context.WithCancel(ctx)
+	c.cancelFunc = cancel
+
+	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
+		return nil, fmt.Errorf("error dialing ZK server: %v", err)
+	}
+
+	c.conn = conn
+
+	if client.Timeout == 0 {
+		c.sessionTimeout = defaultTimeout
+	}
+	c.sessionTimeout = client.Timeout
+	if err = c.authenticate(); err != nil {
 		return nil, err
 	}
 
-	err = conn.dial()
-	if err != nil {
-		return nil, err
-	}
+	go c.handleReads(sessionCtx)
+	go c.keepAlive(sessionCtx)
 
-	err = conn.authenticate()
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	conn.cancelFunc = cancel
-
-	go conn.handleReads(ctx)
-	go conn.keepAlive(ctx)
-
-	return conn, nil
+	return c, nil
 }
 
 // Close closes the client connection, clearing all pending requests.
-func (c *Connection) Close() error {
+func (c *Conn) Close() error {
 	c.cancelFunc()
 	c.clearPendingRequests()
 
 	return c.conn.Close()
 }
 
-func (c *Connection) dial() error {
-	c.server, _ = c.provider.Next()
-	conn, err := net.Dial("tcp", c.server)
-	if err != nil {
-		return fmt.Errorf("error dialing ZK server: %v", err)
-	}
-
-	c.conn = conn
-
-	return nil
-}
-
-func (c *Connection) authenticate() error {
+func (c *Conn) authenticate() error {
 	// create and encode request for zk server
 	request := &proto.ConnectRequest{
 		ProtocolVersion: defaultProtocolVersion,
@@ -148,7 +140,7 @@ func (c *Connection) authenticate() error {
 	return nil
 }
 
-func (c *Connection) GetData(path string) ([]byte, error) {
+func (c *Conn) GetData(path string) ([]byte, error) {
 	header := &proto.RequestHeader{
 		Xid:  c.getXid(),
 		Type: opGetData,
@@ -184,7 +176,7 @@ func (c *Connection) GetData(path string) ([]byte, error) {
 	}
 }
 
-func (c *Connection) handleReads(ctx context.Context) {
+func (c *Conn) handleReads(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -220,7 +212,7 @@ func (c *Connection) handleReads(ctx context.Context) {
 	}
 }
 
-func (c *Connection) keepAlive(ctx context.Context) {
+func (c *Conn) keepAlive(ctx context.Context) {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
 
@@ -246,14 +238,14 @@ func (c *Connection) keepAlive(ctx context.Context) {
 	}
 }
 
-func (c *Connection) clearPendingRequests() {
+func (c *Conn) clearPendingRequests() {
 	c.reqs.Range(func(key, value interface{}) bool {
 		c.reqs.Delete(key)
 		return true
 	})
 }
 
-func (c *Connection) getXid() int32 {
+func (c *Conn) getXid() int32 {
 	if c.xid == math.MaxInt32 {
 		c.xid = 1
 	}

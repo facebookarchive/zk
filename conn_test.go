@@ -1,9 +1,9 @@
 package zk
 
 import (
+	"context"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/facebookincubator/zk/integration"
 )
@@ -25,13 +25,13 @@ func TestAuthentication(t *testing.T) {
 	}
 
 	// attempt to authenticate against server
-	client, err := Connect([]string{"127.0.0.1"}, time.Second)
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer client.Close()
+	defer conn.Close()
 
-	if client.sessionID == 0 {
+	if conn.sessionID == 0 {
 		t.Errorf("expected non-zero session ID")
 	}
 }
@@ -49,13 +49,13 @@ func TestGetDataWorks(t *testing.T) {
 		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
-	client, err := Connect([]string{"127.0.0.1"}, time.Second)
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer client.Close()
+	defer conn.Close()
 
-	res, err := client.GetData("/")
+	res, err := conn.GetData("/")
 	if err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
