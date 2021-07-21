@@ -16,16 +16,12 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
-const defaultTimeout = 2 * time.Second
-
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
-var defaultDialer = &net.Dialer{}
-
-type connection struct {
+type Conn struct {
 	conn   net.Conn
-	Client *Client
+	client *Client
 
 	// the server IP to which the client is currently connected
 	address string
@@ -51,58 +47,52 @@ type connection struct {
 
 // DialContext connects the ZK client to the specified Zookeeper server.
 // The provided context is used to determine the lifetime of the session.
-func (client *Client) DialContext(ctx context.Context, network, address string) (*connection, error) {
-	conn := &connection{
+func (client *Client) DialContext(ctx context.Context, network, address string) (*Conn, error) {
+	c := &Conn{
 		passwd: emptyPassword,
 	}
 	if client.Timeout == 0 {
 		client.Timeout = defaultTimeout
 	}
 
-	if client.Dialer == nil {
-		client.Dialer = defaultDialer.DialContext
+	if client.dialContext == nil {
+		defaultDialer := &net.Dialer{}
+		client.dialContext = defaultDialer.DialContext
 	}
-	conn.Client = client
-	conn.network = network
-	conn.address = address
 
-	ctx, cancel := context.WithCancel(ctx)
-	conn.cancelFunc = cancel
+	c.client = client
+	c.network = network
+	c.address = address
 
-	if err := conn.dial(ctx); err != nil {
+	sessionCtx, cancel := context.WithCancel(ctx)
+	c.cancelFunc = cancel
+
+	conn, err := c.client.dialContext(ctx, c.network, c.address)
+	if err != nil {
+		return nil, fmt.Errorf("error dialing ZK server: %v", err)
+	}
+
+	c.conn = conn
+
+	if err = c.authenticate(); err != nil {
 		return nil, err
 	}
 
-	if err := conn.authenticate(); err != nil {
-		return nil, err
-	}
+	go c.handleReads(sessionCtx)
+	go c.keepAlive(sessionCtx)
 
-	go conn.handleReads(ctx)
-	go conn.keepAlive(ctx)
-
-	return conn, nil
+	return c, nil
 }
 
 // Close closes the client connection, clearing all pending requests.
-func (c *connection) Close() error {
+func (c *Conn) Close() error {
 	c.cancelFunc()
 	c.clearPendingRequests()
 
 	return c.conn.Close()
 }
 
-func (c *connection) dial(ctx context.Context) error {
-	conn, err := c.Client.Dialer(ctx, c.network, c.address)
-	if err != nil {
-		return fmt.Errorf("error dialing ZK server: %v", err)
-	}
-
-	c.conn = conn
-
-	return nil
-}
-
-func (c *connection) authenticate() error {
+func (c *Conn) authenticate() error {
 	// create and encode request for zk server
 	request := &proto.ConnectRequest{
 		ProtocolVersion: defaultProtocolVersion,
@@ -151,7 +141,7 @@ func (c *connection) authenticate() error {
 	return nil
 }
 
-func (c *connection) GetData(path string) ([]byte, error) {
+func (c *Conn) GetData(path string) ([]byte, error) {
 	header := &proto.RequestHeader{
 		Xid:  c.getXid(),
 		Type: opGetData,
@@ -187,7 +177,7 @@ func (c *connection) GetData(path string) ([]byte, error) {
 	}
 }
 
-func (c *connection) handleReads(ctx context.Context) {
+func (c *Conn) handleReads(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -223,7 +213,7 @@ func (c *connection) handleReads(ctx context.Context) {
 	}
 }
 
-func (c *connection) keepAlive(ctx context.Context) {
+func (c *Conn) keepAlive(ctx context.Context) {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
 
@@ -249,14 +239,14 @@ func (c *connection) keepAlive(ctx context.Context) {
 	}
 }
 
-func (c *connection) clearPendingRequests() {
+func (c *Conn) clearPendingRequests() {
 	c.reqs.Range(func(key, value interface{}) bool {
 		c.reqs.Delete(key)
 		return true
 	})
 }
 
-func (c *connection) getXid() int32 {
+func (c *Conn) getXid() int32 {
 	if c.xid == math.MaxInt32 {
 		c.xid = 1
 	}

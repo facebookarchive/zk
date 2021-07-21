@@ -10,17 +10,17 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
+const defaultTimeout = 2 * time.Second
+
+type Client struct {
+	// dialContext is a function to be used to establish a connection to a single host.
+	dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+	Timeout     time.Duration
+}
+
 type pendingRequest struct {
 	reply jute.RecordReader
 	done  chan struct{}
-}
-
-// DialContext is a function to be used to establish a connection to a single host.
-type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
-
-type Client struct {
-	Dialer  DialContext
-	Timeout time.Duration
 }
 
 // serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
