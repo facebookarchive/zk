@@ -20,8 +20,7 @@ var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
 type Conn struct {
-	conn   net.Conn
-	client *Client
+	conn net.Conn
 
 	// client-side request ID
 	xid int32
@@ -42,6 +41,12 @@ type Conn struct {
 	cancelFunc context.CancelFunc
 }
 
+// DialContext connects to the ZK server using the default client.
+func DialContext(ctx context.Context, network, address string) (*Conn, error) {
+	defaultClient := Client{}
+	return defaultClient.DialContext(ctx, network, address)
+}
+
 // DialContext connects the ZK client to the specified Zookeeper server.
 // The provided context is used to determine the lifetime of the session.
 func (client *Client) DialContext(ctx context.Context, network, address string) (*Conn, error) {
@@ -54,12 +59,10 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		client.Dialer = defaultDialer.DialContext
 	}
 
-	c.client = client
-
 	sessionCtx, cancel := context.WithCancel(ctx)
 	c.cancelFunc = cancel
 
-	conn, err := c.client.Dialer(ctx, network, address)
+	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
 		return nil, fmt.Errorf("error dialing ZK server: %v", err)
 	}
