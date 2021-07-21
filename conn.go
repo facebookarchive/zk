@@ -49,8 +49,8 @@ type connection struct {
 	cancelFunc context.CancelFunc
 }
 
-// DialContext the ZK client to the specified Zookeeper server.
-// The session will be considered valid after losing connection to the server based on the provided context.
+// DialContext connects the ZK client to the specified Zookeeper server.
+// The provided context is used to determine the lifetime of the session.
 func (client *Client) DialContext(ctx context.Context, network, address string) (*connection, error) {
 	conn := &connection{
 		passwd: emptyPassword,
