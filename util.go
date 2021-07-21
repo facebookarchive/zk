@@ -2,9 +2,9 @@ package zk
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -14,11 +14,11 @@ type pendingRequest struct {
 	done  chan struct{}
 }
 
-// Dialer is a function to be used to establish a connection to a single host.
-type Dialer func(network, address string, timeout time.Duration) (net.Conn, error)
+// DialContext is a function to be used to establish a connection to a single host.
+type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
 type ConnOptions struct {
-	dialer   Dialer
+	dialer   DialContext
 	provider HostProvider
 }
 

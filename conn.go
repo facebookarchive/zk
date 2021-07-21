@@ -20,8 +20,9 @@ import (
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
+var defaultDialer = &net.Dialer{}
 var DefaultConnOptions = &ConnOptions{
-	dialer:   net.DialTimeout,
+	dialer:   defaultDialer.DialContext,
 	provider: &DNSHostProvider{},
 }
 
@@ -77,8 +78,10 @@ func connect(servers []string, timeout time.Duration, options *ConnOptions) (*Co
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	conn.cancelFunc = cancel
 
-	err = conn.dial()
+	err = conn.dial(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -87,9 +90,6 @@ func connect(servers []string, timeout time.Duration, options *ConnOptions) (*Co
 	if err != nil {
 		return nil, err
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	conn.cancelFunc = cancel
 
 	go conn.handleReads(ctx)
 	go conn.keepAlive(ctx)
@@ -105,9 +105,9 @@ func (c *Connection) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Connection) dial() error {
+func (c *Connection) dial(ctx context.Context) error {
 	c.server, _ = c.Options.provider.Next()
-	conn, err := c.Options.dialer("tcp", c.server, c.sessionTimeout)
+	conn, err := c.Options.dialer(ctx, "tcp", c.server)
 	if err != nil {
 		return fmt.Errorf("error dialing ZK server: %v", err)
 	}
