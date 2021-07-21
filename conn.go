@@ -23,9 +23,6 @@ type Conn struct {
 	conn   net.Conn
 	client *Client
 
-	// the server IP to which the client is currently connected
-	address string
-	network string
 	// client-side request ID
 	xid int32
 	// last seen ZxID, representing a Zookeeper transaction ID
@@ -51,29 +48,28 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 	c := &Conn{
 		passwd: emptyPassword,
 	}
-	if client.Timeout == 0 {
-		client.Timeout = defaultTimeout
-	}
 
-	if client.dialContext == nil {
+	if client.Dialer == nil {
 		defaultDialer := &net.Dialer{}
-		client.dialContext = defaultDialer.DialContext
+		client.Dialer = defaultDialer.DialContext
 	}
 
 	c.client = client
-	c.network = network
-	c.address = address
 
 	sessionCtx, cancel := context.WithCancel(ctx)
 	c.cancelFunc = cancel
 
-	conn, err := c.client.dialContext(ctx, c.network, c.address)
+	conn, err := c.client.Dialer(ctx, network, address)
 	if err != nil {
 		return nil, fmt.Errorf("error dialing ZK server: %v", err)
 	}
 
 	c.conn = conn
 
+	if client.Timeout == 0 {
+		c.sessionTimeout = defaultTimeout
+	}
+	c.sessionTimeout = client.Timeout
 	if err = c.authenticate(); err != nil {
 		return nil, err
 	}

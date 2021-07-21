@@ -8,7 +8,7 @@ import (
 	"github.com/facebookincubator/zk/flw"
 )
 
-func main() {
+func fmain() {
 	testFlw()
 }
 
