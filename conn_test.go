@@ -1,9 +1,9 @@
 package zk
 
 import (
+	"context"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/facebookincubator/zk/integration"
 )
@@ -26,7 +26,7 @@ func TestAuthentication(t *testing.T) {
 
 	// attempt to authenticate against server
 	client := Client{}
-	conn, err := client.Connect("127.0.0.1:2181", time.Second)
+	conn, err := client.DialContext(context.Background(), "tcp", "127.0.0.1:2181")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestGetDataWorks(t *testing.T) {
 		return
 	}
 	client := Client{}
-	conn, err := client.Connect("127.0.0.1:2181", time.Second)
+	conn, err := client.DialContext(context.Background(), "tcp", "127.0.0.1:2181")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
