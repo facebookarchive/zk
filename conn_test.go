@@ -2,7 +2,6 @@ package zk
 
 import (
 	"log"
-	"net"
 	"testing"
 	"time"
 
@@ -26,8 +25,7 @@ func TestAuthentication(t *testing.T) {
 	}
 
 	// attempt to authenticate against server
-	options := []ConnOption{DialerOption(net.DialTimeout), HostProviderOption(&DNSHostProvider{})}
-	client, err := Connect([]string{"127.0.0.1"}, time.Second, options...)
+	client, err := Connect([]string{"127.0.0.1"}, time.Second)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

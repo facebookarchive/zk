@@ -17,19 +17,9 @@ type pendingRequest struct {
 // Dialer is a function to be used to establish a connection to a single host.
 type Dialer func(network, address string, timeout time.Duration) (net.Conn, error)
 
-// ConnOption represents a connection option which can be passed to the Connect function.
-type ConnOption func(c *Connection)
-
-func DialerOption(dialer Dialer) ConnOption {
-	return func(c *Connection) {
-		c.dialer = dialer
-	}
-}
-
-func HostProviderOption(provider HostProvider) ConnOption {
-	return func(c *Connection) {
-		c.provider = provider
-	}
+type ConnOptions struct {
+	dialer   Dialer
+	provider HostProvider
 }
 
 // serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
