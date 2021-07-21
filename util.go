@@ -13,9 +13,9 @@ import (
 const defaultTimeout = 2 * time.Second
 
 type Client struct {
-	// dialContext is a function to be used to establish a connection to a single host.
-	dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
-	Timeout     time.Duration
+	// Dialer is a function to be used to establish a connection to a single host.
+	Dialer  func(ctx context.Context, network, addr string) (net.Conn, error)
+	Timeout time.Duration
 }
 
 type pendingRequest struct {
