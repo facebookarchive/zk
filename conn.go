@@ -10,25 +10,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/facebookincubator/zk/flw"
 	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
+const defaultTimeout = 2 * time.Second
+
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
 var emptyPassword = make([]byte, 16)
 
 var defaultDialer = &net.Dialer{}
-var DefaultConnOptions = &ConnOptions{
-	dialer:   defaultDialer.DialContext,
-	provider: &DNSHostProvider{},
-}
 
 type Connection struct {
-	conn    net.Conn
-	Options *ConnOptions
+	conn   net.Conn
+	Client *Client
 
 	// the server IP to which the client is currently connected
 	server string
@@ -54,40 +51,29 @@ type Connection struct {
 
 // Connect the ZK client to the specified pool of Zookeeper servers with a desired timeout.
 // The session will be considered valid after losing connection to the server based on the provided timeout.
-func Connect(servers []string, timeout time.Duration) (*Connection, error) {
-	return connect(servers, timeout, nil)
-}
-
-// ConnectWithOptions is similar to Connect, but it allows the caller to specify the ConnOptions property.
-func ConnectWithOptions(servers []string, timeout time.Duration, options *ConnOptions) (*Connection, error) {
-	return connect(servers, timeout, options)
-}
-
-func connect(servers []string, timeout time.Duration, options *ConnOptions) (*Connection, error) {
+func (client *Client) Connect(server string, timeout time.Duration) (*Connection, error) {
 	conn := &Connection{
 		sessionTimeout: timeout,
 		passwd:         emptyPassword,
 	}
-	if options == nil {
-		conn.Options = DefaultConnOptions
-	} else {
-		conn.Options = options
+	if client.Timeout == 0 {
+		client.Timeout = defaultTimeout
 	}
 
-	err := conn.Options.provider.Init(flw.FormatServers(servers))
-	if err != nil {
-		return nil, err
+	if client.Dialer == nil {
+		client.Dialer = defaultDialer.DialContext
 	}
+	conn.Client = client
+	conn.server = server
+
 	ctx, cancel := context.WithCancel(context.Background())
 	conn.cancelFunc = cancel
 
-	err = conn.dial(ctx)
-	if err != nil {
+	if err := conn.dial(ctx); err != nil {
 		return nil, err
 	}
 
-	err = conn.authenticate()
-	if err != nil {
+	if err := conn.authenticate(); err != nil {
 		return nil, err
 	}
 
@@ -106,8 +92,7 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) dial(ctx context.Context) error {
-	c.server, _ = c.Options.provider.Next()
-	conn, err := c.Options.dialer(ctx, "tcp", c.server)
+	conn, err := c.Client.Dialer(ctx, "tcp", c.server)
 	if err != nil {
 		return fmt.Errorf("error dialing ZK server: %v", err)
 	}

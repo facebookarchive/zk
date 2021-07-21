@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -17,9 +18,9 @@ type pendingRequest struct {
 // DialContext is a function to be used to establish a connection to a single host.
 type DialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
-type ConnOptions struct {
-	dialer   DialContext
-	provider HostProvider
+type Client struct {
+	Dialer  DialContext
+	Timeout time.Duration
 }
 
 // serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
