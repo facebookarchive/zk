@@ -48,7 +48,7 @@ func DialContext(ctx context.Context, network, address string) (*Conn, error) {
 }
 
 // DialContext connects the ZK client to the specified Zookeeper server.
-// The provided context is used to determine the lifetime of the session.
+// The provided context is used to determine the dial lifetime.
 func (client *Client) DialContext(ctx context.Context, network, address string) (*Conn, error) {
 	c := &Conn{
 		passwd: emptyPassword,
@@ -59,7 +59,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		client.Dialer = defaultDialer.DialContext
 	}
 
-	sessionCtx, cancel := context.WithCancel(ctx)
+	sessionCtx, cancel := context.WithCancel(context.Background())
 	c.cancelFunc = cancel
 
 	conn, err := client.Dialer(ctx, network, address)
