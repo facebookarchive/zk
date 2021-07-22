@@ -59,7 +59,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		client.Dialer = defaultDialer.DialContext
 	}
 
-	sessionCtx, cancel := context.WithCancel(ctx)
+	sessionCtx, cancel := context.WithCancel(context.Background())
 	c.cancelFunc = cancel
 
 	conn, err := client.Dialer(ctx, network, address)
