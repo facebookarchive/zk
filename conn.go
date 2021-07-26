@@ -69,12 +69,12 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 
 	c.conn = conn
 
-	if client.Timeout == 0 {
-		c.sessionTimeout = defaultTimeout
+	c.sessionTimeout = defaultTimeout
+	if client.Timeout != 0 {
+		c.sessionTimeout = client.Timeout
 	}
-	c.sessionTimeout = client.Timeout
 	if err = c.authenticate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
 	}
 
 	go c.handleReads(sessionCtx)
