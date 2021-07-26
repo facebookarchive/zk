@@ -100,7 +100,6 @@ func (c *Conn) authenticate() error {
 		SessionId:       c.sessionID,
 		Passwd:          c.passwd,
 	}
-	fmt.Printf("request:%+v\n", request)
 
 	sendBuf, err := serializeWriters(request)
 	if err != nil {
@@ -111,7 +110,6 @@ func (c *Conn) authenticate() error {
 	if _, err = c.conn.Write(sendBuf); err != nil {
 		return fmt.Errorf("error writing authentication request to net.conn: %v", err)
 	}
-	fmt.Printf("senttttttttt %v\n\n\n\n\n\n", sendBuf)
 
 	// receive bytes from same socket, reading the message length first
 	dec := jute.NewBinaryDecoder(c.conn)
