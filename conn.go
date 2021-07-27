@@ -184,6 +184,9 @@ func (c *Conn) handleReads(ctx context.Context) {
 		default:
 			dec := jute.NewBinaryDecoder(c.conn)
 			_, err := dec.ReadInt() // read response length
+			if errors.Is(err, net.ErrClosed) {
+				return // don't make further attempts to read from closed connection, close goroutine
+			}
 			if err != nil {
 				log.Printf("could not decode response length: %v", err)
 				break
