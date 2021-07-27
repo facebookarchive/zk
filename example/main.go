@@ -1,60 +1,40 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"net"
 	"time"
 
-	"github.com/facebookincubator/zk/flw"
+	"github.com/facebookincubator/zk"
+	"github.com/facebookincubator/zk/integration"
 )
 
 func main() {
-	testFlw()
-}
-
-func testFlw() {
-	testServers := []string{"localhost:2181"}
-
-	l, err := net.Listen("tcp", fmt.Sprintf("localhost:0"))
+	server, err := integration.NewZKServer("3.6.2", integration.DefaultConfig())
 	if err != nil {
-		fmt.Printf("could not connect: %v\n", err)
+		fmt.Println("error initializing server:", err)
 		return
 	}
-	defer l.Close()
-
-	statsSlice, ok := flw.Srvr(testServers, time.Second*10)
-	if len(statsSlice) == 0 {
-		fmt.Println("no *ServerStats instances returned")
-		return
-	}
-	if !ok {
-		fmt.Printf("error getting response for 'srvr': %v\n", statsSlice[0].Error)
+	if err = server.Run(); err != nil {
+		fmt.Println("error running server:", err)
 		return
 	}
 
-	for idx, stat := range statsSlice {
-		fmt.Printf("got srvr stat for address %s -> %+v\n", testServers[idx], stat)
-	}
-
-	okSlice := flw.Ruok(testServers, time.Second*10)
-	if len(okSlice) == 0 {
-		fmt.Println("no *ServerStats instances returned")
+	defer server.Shutdown()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	client := zk.Client{}
+	conn, err := client.DialContext(ctx, "tcp", "127.0.0.1:2181")
+	if err != nil {
+		fmt.Println("error dialing server:", err)
 		return
 	}
 
-	for idx, ok := range okSlice {
-		fmt.Printf("got ruok response for address %s -> %+v\n", testServers[idx], ok)
-	}
-
-	clientsSlice, ok := flw.Cons(testServers, time.Second*10)
-	if len(clientsSlice) == 0 || len(clientsSlice[0].Clients) == 0 {
-		fmt.Println("no *ServerClient instances returned")
+	data, err := conn.GetData("/")
+	if err != nil {
+		fmt.Println("getdata error:", err)
 		return
 	}
 
-	for idx, clients := range clientsSlice {
-		for _, client := range clients.Clients {
-			fmt.Printf("got cons client for address %s -> %+v\n", testServers[idx], client)
-		}
-	}
+	fmt.Println("got data: ", string(data))
 }
