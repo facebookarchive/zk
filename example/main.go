@@ -1,60 +1,32 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
-	"net"
 	"time"
 
-	"github.com/facebookincubator/zk/flw"
+	"github.com/facebookincubator/zk"
 )
 
 func main() {
-	testFlw()
-}
+	path := flag.String("path", "/", "Znode path from which to get data.")
+	address := flag.String("server", "127.0.0.1:2181", "Zookeeper server address.")
 
-func testFlw() {
-	testServers := []string{"localhost:2181"}
-
-	l, err := net.Listen("tcp", fmt.Sprintf("localhost:0"))
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	client := zk.Client{}
+	conn, err := client.DialContext(ctx, "tcp", *address)
 	if err != nil {
-		fmt.Printf("could not connect: %v\n", err)
-		return
-	}
-	defer l.Close()
-
-	statsSlice, ok := flw.Srvr(testServers, time.Second*10)
-	if len(statsSlice) == 0 {
-		fmt.Println("no *ServerStats instances returned")
-		return
-	}
-	if !ok {
-		fmt.Printf("error getting response for 'srvr': %v\n", statsSlice[0].Error)
+		fmt.Println("error dialing server:", err)
 		return
 	}
 
-	for idx, stat := range statsSlice {
-		fmt.Printf("got srvr stat for address %s -> %+v\n", testServers[idx], stat)
-	}
-
-	okSlice := flw.Ruok(testServers, time.Second*10)
-	if len(okSlice) == 0 {
-		fmt.Println("no *ServerStats instances returned")
+	data, err := conn.GetData(*path)
+	if err != nil {
+		fmt.Println("getdata error:", err)
 		return
 	}
 
-	for idx, ok := range okSlice {
-		fmt.Printf("got ruok response for address %s -> %+v\n", testServers[idx], ok)
-	}
-
-	clientsSlice, ok := flw.Cons(testServers, time.Second*10)
-	if len(clientsSlice) == 0 || len(clientsSlice[0].Clients) == 0 {
-		fmt.Println("no *ServerClient instances returned")
-		return
-	}
-
-	for idx, clients := range clientsSlice {
-		for _, client := range clients.Clients {
-			fmt.Printf("got cons client for address %s -> %+v\n", testServers[idx], client)
-		}
-	}
+	fmt.Println("got data: ", string(data))
 }
