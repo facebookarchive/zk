@@ -77,8 +77,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
 	}
 
-	go c.handleReads(c.sessionCtx)
-	go c.keepAlive(c.sessionCtx)
+	go c.handleReads()
+	go c.keepAlive()
 
 	return c, nil
 }
@@ -178,12 +178,12 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	}
 }
 
-func (c *Conn) handleReads(ctx context.Context) {
+func (c *Conn) handleReads() {
 	defer c.Close()
 	dec := jute.NewBinaryDecoder(c.conn)
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.sessionCtx.Done():
 			return
 		default:
 			_, err := dec.ReadInt() // read response length
@@ -218,7 +218,7 @@ func (c *Conn) handleReads(ctx context.Context) {
 	}
 }
 
-func (c *Conn) keepAlive(ctx context.Context) {
+func (c *Conn) keepAlive() {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
 	defer c.Close()
@@ -238,7 +238,7 @@ func (c *Conn) keepAlive(ctx context.Context) {
 				log.Printf("error writing ping request to net.conn: %v", err)
 				continue
 			}
-		case <-ctx.Done():
+		case <-c.sessionCtx.Done():
 			return
 		}
 	}
