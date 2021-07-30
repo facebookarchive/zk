@@ -37,8 +37,9 @@ type Conn struct {
 	// the client sends pings to the server in this interval to keep the connection alive
 	pingInterval time.Duration
 
-	reqs       sync.Map
-	cancelFunc context.CancelFunc
+	reqs          sync.Map
+	cancelSession context.CancelFunc
+	sessionCtx    context.Context
 }
 
 // DialContext connects to the ZK server using the default client.
@@ -60,7 +61,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 	}
 
 	sessionCtx, cancel := context.WithCancel(context.Background())
-	c.cancelFunc = cancel
+	c.sessionCtx = sessionCtx
+	c.cancelSession = cancel
 
 	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
@@ -85,7 +87,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 
 // Close closes the client connection, clearing all pending requests.
 func (c *Conn) Close() error {
-	c.cancelFunc()
+	c.cancelSession()
 	c.clearPendingRequests()
 
 	return c.conn.Close()
@@ -171,12 +173,15 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	select {
 	case <-pending.done:
 		return r.Data, nil
+	case <-c.sessionCtx.Done():
+		return nil, fmt.Errorf("connection closed")
 	case <-time.After(c.sessionTimeout):
 		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}
 }
 
 func (c *Conn) handleReads(ctx context.Context) {
+	defer c.Close()
 	for {
 		select {
 		case <-ctx.Done():
@@ -218,7 +223,7 @@ func (c *Conn) handleReads(ctx context.Context) {
 func (c *Conn) keepAlive(ctx context.Context) {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
-
+	defer c.Close()
 	for {
 		select {
 		case <-pingTicker.C:
