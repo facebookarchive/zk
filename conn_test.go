@@ -91,20 +91,17 @@ func TestGetDataNoTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
-	// close conn artificially, subsequent calls to getData should not wait for timeout
-	conn.Close()
+
 	// call GetData again
-	_, err = conn.GetData("/")
+	go conn.GetData("/")
+	// close conn artificially, subsequent call to getData should not wait for timeout
+	conn.Close()
 
 	select {
 	case <-time.After(sessionTimeout):
 		t.Fatalf("client should not wait for timeout if connection is closed")
 	default:
-		if errors.Is(errors.Unwrap(err), net.ErrClosed) {
-			log.Printf("got ErrClosed as expected")
-			return
-		}
-		if err != nil {
+		if err != nil && !errors.Is(errors.Unwrap(err), net.ErrClosed) {
 			t.Fatalf("unexpected error calling GetData: %v", err)
 		}
 	}

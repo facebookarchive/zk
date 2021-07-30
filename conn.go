@@ -240,7 +240,6 @@ func (c *Conn) keepAlive(ctx context.Context) {
 				log.Printf("error writing ping request to net.conn: %v", err)
 				continue
 			}
-			log.Printf("pinggggg\n\n\n\n")
 		case <-ctx.Done():
 			return
 		}
