@@ -60,9 +60,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		client.Dialer = defaultDialer.DialContext
 	}
 
-	sessionCtx, cancel := context.WithCancel(context.Background())
-	c.sessionCtx = sessionCtx
-	c.cancelSession = cancel
+	c.sessionCtx, c.cancelSession = context.WithCancel(context.Background())
 
 	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
@@ -79,8 +77,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
 	}
 
-	go c.handleReads(sessionCtx)
-	go c.keepAlive(sessionCtx)
+	go c.handleReads(c.sessionCtx)
+	go c.keepAlive(c.sessionCtx)
 
 	return c, nil
 }
@@ -182,12 +180,12 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 
 func (c *Conn) handleReads(ctx context.Context) {
 	defer c.Close()
+	dec := jute.NewBinaryDecoder(c.conn)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			dec := jute.NewBinaryDecoder(c.conn)
 			_, err := dec.ReadInt() // read response length
 			if errors.Is(err, net.ErrClosed) {
 				return // don't make further attempts to read from closed connection, close goroutine

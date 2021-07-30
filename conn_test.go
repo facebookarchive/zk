@@ -86,18 +86,11 @@ func TestGetDataNoTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer conn.Close()
-
-	_, err = conn.GetData("/")
-	if err != nil {
-		t.Fatalf("unexpected error calling GetData: %v", err)
-	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	// call GetData again
 	go asyncGetData(&wg, err, conn, sessionTimeout, t)
-	// close conn artificially, subsequent call to getData should not wait for timeout
+	// close conn artificially, call to getData should not wait for timeout
 	conn.Close()
 
 	wg.Wait()
