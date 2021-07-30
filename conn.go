@@ -172,7 +172,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	case <-pending.done:
 		return r.Data, nil
 	case <-c.sessionCtx.Done():
-		return nil, fmt.Errorf("session closed: %w", net.ErrClosed)
+		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
 	case <-time.After(c.sessionTimeout):
 		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}

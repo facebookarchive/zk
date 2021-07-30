@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -87,17 +86,8 @@ func TestGetDataNoTimeout(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go asyncGetData(&wg, err, conn, sessionTimeout, t)
-	// close conn artificially, call to getData should not wait for timeout
+	// close conn before sending request
 	conn.Close()
-
-	wg.Wait()
-}
-
-func asyncGetData(wg *sync.WaitGroup, err error, conn *Conn, sessionTimeout time.Duration, t *testing.T) {
-	defer wg.Done()
 	_, err = conn.GetData("/")
 	select {
 	case <-time.After(sessionTimeout):
