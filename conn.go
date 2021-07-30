@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -153,10 +152,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
-	r := &proto.GetDataResponse{
-		Data: nil,
-		Stat: &data.Stat{},
-	}
+	r := &proto.GetDataResponse{}
 	pending := pendingRequest{
 		reply: r,
 		done:  make(chan struct{}, 1),

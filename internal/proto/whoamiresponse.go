@@ -11,10 +11,10 @@ import (
 )
 
 type WhoAmIResponse struct {
-	ClientInfo []*data.ClientInfo // clientInfo
+	ClientInfo []data.ClientInfo // clientInfo
 }
 
-func (r *WhoAmIResponse) GetClientInfo() []*data.ClientInfo {
+func (r *WhoAmIResponse) GetClientInfo() []data.ClientInfo {
 	if r != nil && r.ClientInfo != nil {
 		return r.ClientInfo
 	}
@@ -33,9 +33,9 @@ func (r *WhoAmIResponse) Read(dec jute.Decoder) (err error) {
 	if size < 0 {
 		r.ClientInfo = nil
 	} else {
-		r.ClientInfo = make([]*data.ClientInfo, size)
+		r.ClientInfo = make([]data.ClientInfo, size)
 		for i := 0; i < size; i++ {
-			if err = dec.ReadRecord(r.ClientInfo[i]); err != nil {
+			if err = dec.ReadRecord(&r.ClientInfo[i]); err != nil {
 				return err
 			}
 		}
@@ -57,7 +57,7 @@ func (r *WhoAmIResponse) Write(enc jute.Encoder) error {
 		return err
 	}
 	for _, v := range r.ClientInfo {
-		if err := enc.WriteRecord(v); err != nil {
+		if err := enc.WriteRecord(&v); err != nil {
 			return err
 		}
 	}
