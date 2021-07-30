@@ -167,14 +167,14 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	c.reqs.Store(header.Xid, pending)
 
 	if _, err = c.conn.Write(sendBuf); err != nil {
-		return nil, fmt.Errorf("error writing GetData request to net.conn: %v", err)
+		return nil, fmt.Errorf("error writing GetData request to net.conn: %w", err)
 	}
 
 	select {
 	case <-pending.done:
 		return r.Data, nil
 	case <-c.sessionCtx.Done():
-		return nil, fmt.Errorf("connection closed")
+		return nil, fmt.Errorf("session closed: %w", net.ErrClosed)
 	case <-time.After(c.sessionTimeout):
 		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}
@@ -240,6 +240,7 @@ func (c *Conn) keepAlive(ctx context.Context) {
 				log.Printf("error writing ping request to net.conn: %v", err)
 				continue
 			}
+			log.Printf("pinggggg\n\n\n\n")
 		case <-ctx.Done():
 			return
 		}
