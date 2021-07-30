@@ -77,11 +77,7 @@ func TestGetDataNoTimeout(t *testing.T) {
 		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
 	}
-	sessionTimeout := 5 * time.Second
-	client := Client{
-		Timeout: sessionTimeout,
-	}
-	conn, err := client.DialContext(context.Background(), "tcp", "127.0.0.1:2181")
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,13 +86,11 @@ func TestGetDataNoTimeout(t *testing.T) {
 	conn.Close()
 	_, err = conn.GetData("/")
 	select {
-	case <-time.After(sessionTimeout):
-		t.Errorf("client should not wait for timeout if connection is closed")
-		return
+	case <-time.After(defaultTimeout):
+		t.Fatalf("client should not wait for timeout if connection is closed")
 	default:
 		if err != nil && !errors.Is(errors.Unwrap(err), net.ErrClosed) {
-			t.Errorf("unexpected error calling GetData: %v", err)
-			return
+			t.Fatalf("unexpected error calling GetData: %v", err)
 		}
 	}
 }
