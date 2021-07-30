@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -92,18 +93,27 @@ func TestGetDataNoTimeout(t *testing.T) {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	// call GetData again
-	go conn.GetData("/")
+	go asyncGetData(&wg, err, conn, sessionTimeout, t)
 	// close conn artificially, subsequent call to getData should not wait for timeout
 	conn.Close()
 
+	wg.Wait()
+}
+
+func asyncGetData(wg *sync.WaitGroup, err error, conn *Conn, sessionTimeout time.Duration, t *testing.T) {
+	defer wg.Done()
+	_, err = conn.GetData("/")
 	select {
 	case <-time.After(sessionTimeout):
-		t.Fatalf("client should not wait for timeout if connection is closed")
+		t.Errorf("client should not wait for timeout if connection is closed")
+		return
 	default:
 		if err != nil && !errors.Is(errors.Unwrap(err), net.ErrClosed) {
-			t.Fatalf("unexpected error calling GetData: %v", err)
+			t.Errorf("unexpected error calling GetData: %v", err)
+			return
 		}
 	}
-
 }
