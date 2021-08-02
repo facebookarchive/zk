@@ -15,8 +15,6 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
-var ErrSessionExpired = errors.New("zk: session has been expired by the server")
-
 type Conn struct {
 	conn net.Conn
 
@@ -41,13 +39,12 @@ func DialContext(ctx context.Context, network, address string) (*Conn, error) {
 // DialContext connects the ZK client to the specified Zookeeper server.
 // The provided context is used to determine the dial lifetime.
 func (client *Client) DialContext(ctx context.Context, network, address string) (*Conn, error) {
-	c := &Conn{}
-
 	if client.Dialer == nil {
 		defaultDialer := &net.Dialer{}
 		client.Dialer = defaultDialer.DialContext
 	}
 
+	c := &Conn{}
 	sessionCtx, cancel := context.WithCancel(context.Background())
 	c.cancelFunc = cancel
 
@@ -107,10 +104,6 @@ func (c *Conn) authenticate() error {
 	response := proto.ConnectResponse{}
 	if err = response.Read(dec); err != nil {
 		return fmt.Errorf("could not decode response struct: %v", err)
-	}
-
-	if response.SessionId == 0 {
-		return ErrSessionExpired
 	}
 
 	c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
