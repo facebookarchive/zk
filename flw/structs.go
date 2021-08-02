@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+// Client is a customizable abstraction for calling FLW protocol functions.
+type Client struct {
+	timeout time.Duration
+}
+
 // ServerClients is a struct for the Cons() function. It's used to provide
 // the list of Clients.
 //
@@ -32,7 +37,7 @@ type ServerStats struct {
 }
 
 // ServerClient is the information for a single Zookeeper client and its session.
-// This is used to parse/extract the output fo the `cons` command.
+// This is used to parse/extract the output of the `cons` command.
 type ServerClient struct {
 	Queued        int64
 	Received      int64
