@@ -30,6 +30,10 @@ func TestAuthentication(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	defer conn.Close()
+
+	if conn.sessionID == 0 {
+		t.Errorf("expected non-zero session ID")
+	}
 }
 
 func TestGetDataWorks(t *testing.T) {
