@@ -16,7 +16,6 @@ import (
 )
 
 var ErrSessionExpired = errors.New("zk: session has been expired by the server")
-var emptyPassword = make([]byte, 16)
 
 type Conn struct {
 	conn net.Conn
@@ -86,7 +85,6 @@ func (c *Conn) authenticate() error {
 	request := &proto.ConnectRequest{
 		ProtocolVersion: defaultProtocolVersion,
 		TimeOut:         int32(c.sessionTimeout.Milliseconds()),
-		Passwd:          emptyPassword,
 	}
 
 	sendBuf, err := serializeWriters(request)
