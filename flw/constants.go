@@ -1,6 +1,9 @@
 package flw
 
+import "time"
+
 const DefaultPort = 2181
+const defaultTimeout = 2 * time.Second
 
 // Mode is used to build custom server modes (leader|follower|standalone).
 type Mode uint8
@@ -13,10 +16,10 @@ func (m Mode) String() string {
 }
 
 const (
-	ModeUnknown    Mode = iota
-	ModeLeader     Mode = iota
-	ModeFollower   Mode = iota
-	ModeStandalone Mode = iota
+	ModeUnknown Mode = iota
+	ModeLeader
+	ModeFollower
+	ModeStandalone
 )
 
 var (
