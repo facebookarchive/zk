@@ -1,5 +1,6 @@
 package flw
 
+// DefaultPort is the default port number on which Zookeeper servers listen for client connections.
 const DefaultPort = 2181
 
 // Mode is used to build custom server modes (leader|follower|standalone).
@@ -13,16 +14,16 @@ func (m Mode) String() string {
 }
 
 const (
-	ModeUnknown    Mode = iota
-	ModeLeader     Mode = iota
-	ModeFollower   Mode = iota
-	ModeStandalone Mode = iota
+	modeUnknown    Mode = iota
+	modeLeader     Mode = iota
+	modeFollower   Mode = iota
+	modeStandalone Mode = iota
 )
 
 var (
 	modeNames = map[Mode]string{
-		ModeLeader:     "leader",
-		ModeFollower:   "follower",
-		ModeStandalone: "standalone",
+		modeLeader:     "leader",
+		modeFollower:   "follower",
+		modeStandalone: "standalone",
 	}
 )

@@ -15,6 +15,7 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
+// Conn represents a client connection to a Zookeeper server and parameters needed to handle its lifetime.
 type Conn struct {
 	conn net.Conn
 
@@ -117,6 +118,7 @@ func (c *Conn) authenticate() error {
 	return nil
 }
 
+// GetData calls Get on a Zookeeper server's node using the specified path and returns the server's response.
 func (c *Conn) GetData(path string) ([]byte, error) {
 	header := &proto.RequestHeader{
 		Xid:  c.getXid(),
