@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/facebookincubator/zk"
 )
 
 // Srvr is a FourLetterWord helper function. In particular, this function pulls the srvr output
@@ -240,19 +238,19 @@ func (c *Client) Cons(servers []string) ([]*ServerClients, bool) {
 
 // Srvr executes the srvr FLW protocol function using the default client.
 func Srvr(servers []string) ([]*ServerStats, bool) {
-	defaultClient := &Client{Timeout: zk.DefaultTimeout}
+	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Srvr(servers)
 }
 
 // Ruok executes the ruok FLW protocol function using the default client.
 func Ruok(servers []string) []bool {
-	defaultClient := &Client{Timeout: zk.DefaultTimeout}
+	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Ruok(servers)
 }
 
 // Cons executes the cons FLW protocol function using the default client.
 func Cons(servers []string) ([]*ServerClients, bool) {
-	defaultClient := &Client{Timeout: zk.DefaultTimeout}
+	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Cons(servers)
 }
 
