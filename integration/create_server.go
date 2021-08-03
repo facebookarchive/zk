@@ -22,6 +22,7 @@ const defaultArchiveName = "server.tar.gz"
 const defaultConfigName = "zk.cfg"
 const maxRetries = 10
 
+// ZKServer represents a configurable Zookeeper server, mainly used for integration testing.
 type ZKServer struct {
 	Version string
 	Config  *ServerConfig
@@ -97,6 +98,7 @@ func (server *ZKServer) Run() error {
 	return nil
 }
 
+// Shutdown kills the underlying process of a ZKServer instance.
 func (server *ZKServer) Shutdown() error {
 	log.Printf("Shutdown() called, killing server process")
 	return server.cmd.Process.Kill()
