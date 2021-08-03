@@ -68,7 +68,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 
 	c.conn = conn
 
-	c.sessionTimeout = defaultTimeout
+	c.sessionTimeout = DefaultTimeout
 	if client.Timeout != 0 {
 		c.sessionTimeout = client.Timeout
 	}
