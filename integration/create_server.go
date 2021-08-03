@@ -63,7 +63,7 @@ func (server *ZKServer) Run() error {
 	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
 		err = downloadToFile(zkURL, archivePath)
 		if err != nil {
-			return fmt.Errorf("error downloading file: %s\n", err)
+			return fmt.Errorf("error downloading file: %s", err)
 		}
 		log.Printf("successfully downloaded archive %s\n", defaultArchiveName)
 	}
@@ -72,14 +72,14 @@ func (server *ZKServer) Run() error {
 	if _, err := os.Stat(filepath.Join(workdir, dirName)); os.IsNotExist(err) {
 		_, err := extractTarGz(archivePath)
 		if err != nil {
-			return fmt.Errorf("error extracting file: %s\n", err)
+			return fmt.Errorf("error extracting file: %s", err)
 		}
 	}
 
 	serverScriptPath := filepath.Join(workdir, dirName, "bin/zkServer.sh")
 	err = os.Chmod(serverScriptPath, 0777)
 	if err != nil {
-		return fmt.Errorf("error changing server script permissions: %s\n", err)
+		return fmt.Errorf("error changing server script permissions: %s", err)
 	}
 
 	server.cmd = exec.Command(serverScriptPath, "start-foreground", filepath.Join(workdir, defaultConfigName))
@@ -88,7 +88,7 @@ func (server *ZKServer) Run() error {
 
 	err = server.cmd.Start()
 	if err != nil {
-		return fmt.Errorf("error executing server command: %s\n", err)
+		return fmt.Errorf("error executing server command: %s", err)
 	}
 
 	if err = waitForStart([]string{"0.0.0.0"}, maxRetries, time.Second); err != nil {
