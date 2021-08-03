@@ -20,7 +20,7 @@ import (
 // then the error happened before we started to obtain 'srvr' values. Otherwise, one of the
 // servers had an issue and the "Error" value in the struct should be inspected to determine
 // which server had the issue.
-func Srvr(servers []string, timeout time.Duration) ([]*ServerStats, bool) {
+func (c *Client) Srvr(servers []string) ([]*ServerStats, bool) {
 	// different parts of the regular expression that are required to parse the srvr output
 	const (
 		zrVer   = `^Zookeeper version: ([A-Za-z0-9\.\-]+), built on (\d\d/\d\d/\d\d\d\d \d\d:\d\d [A-Za-z0-9:\+\-]+)`
@@ -40,7 +40,7 @@ func Srvr(servers []string, timeout time.Duration) ([]*ServerStats, bool) {
 	ss := make([]*ServerStats, len(servers))
 
 	for i := range ss {
-		response, err := fourLetterWord(servers[i], "srvr", timeout)
+		response, err := fourLetterWord(servers[i], "srvr", c.Timeout)
 
 		if err != nil {
 			ss[i] = &ServerStats{Error: err}
@@ -127,12 +127,12 @@ func Srvr(servers []string, timeout time.Duration) ([]*ServerStats, bool) {
 
 // Ruok is a FourLetterWord helper function. In particular, this function
 // pulls the ruok output from each server.
-func Ruok(servers []string, timeout time.Duration) []bool {
+func (c *Client) Ruok(servers []string) []bool {
 	servers = FormatServers(servers)
 	oks := make([]bool, len(servers))
 
 	for i := range oks {
-		response, err := fourLetterWord(servers[i], "ruok", timeout)
+		response, err := fourLetterWord(servers[i], "ruok", c.Timeout)
 
 		if err != nil {
 			continue
@@ -150,7 +150,7 @@ func Ruok(servers []string, timeout time.Duration) []bool {
 //
 // As with Srvr, the boolean value indicates whether one of the requests had
 // an issue. The Clients struct has an Error value that can be checked.
-func Cons(servers []string, timeout time.Duration) ([]*ServerClients, bool) {
+func (c *Client) Cons(servers []string) ([]*ServerClients, bool) {
 	const (
 		zrAddr = `^ /((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):(?:\d+))\[\d+\]`
 		zrPac  = `\(queued=(\d+),recved=(\d+),sent=(\d+),sid=(0x[A-Za-z0-9]+),lop=(\w+),est=(\d+),to=(\d+),`
@@ -167,7 +167,7 @@ func Cons(servers []string, timeout time.Duration) ([]*ServerClients, bool) {
 	imOk := true
 
 	for i := range sc {
-		response, err := fourLetterWord(servers[i], "cons", timeout)
+		response, err := fourLetterWord(servers[i], "cons", c.Timeout)
 
 		if err != nil {
 			sc[i] = &ServerClients{Error: err}
@@ -234,6 +234,24 @@ func Cons(servers []string, timeout time.Duration) ([]*ServerClients, bool) {
 	}
 
 	return sc, imOk
+}
+
+// Srvr executes the srvr FLW protocol function using the default client.
+func Srvr(servers []string) ([]*ServerStats, bool) {
+	defaultClient := &Client{Timeout: defaultTimeout}
+	return defaultClient.Srvr(servers)
+}
+
+// Ruok executes the ruok FLW protocol function using the default client.
+func Ruok(servers []string) []bool {
+	defaultClient := &Client{Timeout: defaultTimeout}
+	return defaultClient.Ruok(servers)
+}
+
+// Cons executes the cons FLW protocol function using the default client.
+func Cons(servers []string) ([]*ServerClients, bool) {
+	defaultClient := &Client{Timeout: defaultTimeout}
+	return defaultClient.Cons(servers)
 }
 
 // parseInt64 is similar to strconv.ParseInt, but it also handles hex values that represent negative numbers
