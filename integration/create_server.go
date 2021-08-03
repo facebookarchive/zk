@@ -135,6 +135,7 @@ func extractTarGz(src string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error opening archive file: %v", err.Error())
 	}
+	defer file.Close()
 
 	reader, err := gzip.NewReader(file)
 	if err != nil {
