@@ -13,10 +13,10 @@ func (m Mode) String() string {
 }
 
 const (
-	ModeUnknown    Mode = iota
-	ModeLeader     Mode = iota
-	ModeFollower   Mode = iota
-	ModeStandalone Mode = iota
+	ModeUnknown Mode = iota
+	ModeLeader
+	ModeFollower
+	ModeStandalone
 )
 
 var (

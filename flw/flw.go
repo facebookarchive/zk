@@ -40,7 +40,7 @@ func (c *Client) Srvr(servers []string) ([]*ServerStats, bool) {
 	ss := make([]*ServerStats, len(servers))
 
 	for i := range ss {
-		response, err := fourLetterWord(servers[i], "srvr", c.timeout)
+		response, err := fourLetterWord(servers[i], "srvr", c.Timeout)
 
 		if err != nil {
 			ss[i] = &ServerStats{Error: err}
@@ -132,7 +132,7 @@ func (c *Client) Ruok(servers []string) []bool {
 	oks := make([]bool, len(servers))
 
 	for i := range oks {
-		response, err := fourLetterWord(servers[i], "ruok", c.timeout)
+		response, err := fourLetterWord(servers[i], "ruok", c.Timeout)
 
 		if err != nil {
 			continue
@@ -167,7 +167,7 @@ func (c *Client) Cons(servers []string) ([]*ServerClients, bool) {
 	imOk := true
 
 	for i := range sc {
-		response, err := fourLetterWord(servers[i], "cons", c.timeout)
+		response, err := fourLetterWord(servers[i], "cons", c.Timeout)
 
 		if err != nil {
 			sc[i] = &ServerClients{Error: err}

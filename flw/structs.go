@@ -6,7 +6,7 @@ import (
 
 // Client is a customizable abstraction for calling FLW protocol functions.
 type Client struct {
-	timeout time.Duration
+	Timeout time.Duration
 }
 
 // ServerClients is a struct for the Cons() function. It's used to provide

@@ -201,8 +201,9 @@ func ensureBaseDir(filepath string) error {
 
 // waitForStart blocks until all servers from the specified addresses slice are up
 func waitForStart(addresses []string, maxRetry int, interval time.Duration) error {
+	client := &flw.Client{Timeout: time.Second}
 	for i := 0; i < maxRetry; i++ {
-		_, ok := flw.Srvr(addresses, time.Second)
+		_, ok := client.Srvr(addresses)
 		if ok {
 			return nil
 		}

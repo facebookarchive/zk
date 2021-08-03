@@ -34,7 +34,7 @@ func TestRuok(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	client := &Client{timeout: 10 * time.Second}
+	client := &Client{Timeout: 10 * time.Second}
 	oks := client.Ruok([]string{l.Addr().String()})
 	if len(oks) == 0 {
 		t.Errorf("No values returned")
@@ -73,7 +73,7 @@ func TestSrvr(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	client := &Client{timeout: 10 * time.Second}
+	client := &Client{Timeout: 10 * time.Second}
 	statsSlice, ok := client.Srvr([]string{l.Addr().String()})
 	if !ok {
 		t.Errorf("Failure indicated on 'srvr' parsing")
@@ -160,7 +160,7 @@ func TestCons(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	client := &Client{timeout: 10 * time.Second}
+	client := &Client{Timeout: 10 * time.Second}
 	clients, ok := client.Cons([]string{l.Addr().String()})
 	if !ok {
 		t.Errorf("failure indicated on 'cons' parsing")
