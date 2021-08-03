@@ -26,8 +26,9 @@ type Conn struct {
 	// the client sends pings to the server in this interval to keep the connection alive
 	pingInterval time.Duration
 
-	reqs       sync.Map
-	cancelFunc context.CancelFunc
+	reqs          sync.Map
+	cancelSession context.CancelFunc
+	sessionCtx    context.Context
 }
 
 // DialContext connects to the ZK server using the default client.
@@ -54,7 +55,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 	c := &Conn{
 		conn:           conn,
 		sessionTimeout: defaultTimeout,
-		cancelFunc:     cancel,
+		cancelSession:  cancel,
+		sessionCtx:     sessionCtx,
 	}
 
 	if client.Timeout != 0 {
@@ -64,15 +66,15 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
 	}
 
-	go c.handleReads(sessionCtx)
-	go c.keepAlive(sessionCtx)
+	go c.handleReads()
+	go c.keepAlive()
 
 	return c, nil
 }
 
 // Close closes the client connection, clearing all pending requests.
 func (c *Conn) Close() error {
-	c.cancelFunc()
+	c.cancelSession()
 	c.clearPendingRequests()
 
 	return c.conn.Close()
@@ -137,24 +139,27 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	c.reqs.Store(header.Xid, pending)
 
 	if _, err = c.conn.Write(sendBuf); err != nil {
-		return nil, fmt.Errorf("error writing GetData request to net.conn: %v", err)
+		return nil, fmt.Errorf("error writing GetData request to net.conn: %w", err)
 	}
 
 	select {
 	case <-pending.done:
 		return r.Data, nil
+	case <-c.sessionCtx.Done():
+		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
 	case <-time.After(c.sessionTimeout):
 		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}
 }
 
-func (c *Conn) handleReads(ctx context.Context) {
+func (c *Conn) handleReads() {
+	defer c.Close()
+	dec := jute.NewBinaryDecoder(c.conn)
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.sessionCtx.Done():
 			return
 		default:
-			dec := jute.NewBinaryDecoder(c.conn)
 			_, err := dec.ReadInt() // read response length
 			if errors.Is(err, net.ErrClosed) {
 				return // don't make further attempts to read from closed connection, close goroutine
@@ -187,10 +192,10 @@ func (c *Conn) handleReads(ctx context.Context) {
 	}
 }
 
-func (c *Conn) keepAlive(ctx context.Context) {
+func (c *Conn) keepAlive() {
 	pingTicker := time.NewTicker(c.pingInterval)
 	defer pingTicker.Stop()
-
+	defer c.Close()
 	for {
 		select {
 		case <-pingTicker.C:
@@ -207,7 +212,7 @@ func (c *Conn) keepAlive(ctx context.Context) {
 				log.Printf("error writing ping request to net.conn: %v", err)
 				continue
 			}
-		case <-ctx.Done():
+		case <-c.sessionCtx.Done():
 			return
 		}
 	}

@@ -2,8 +2,12 @@ package zk
 
 import (
 	"context"
+	"errors"
+	"io"
 	"log"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/facebookincubator/zk/integration"
 )
@@ -56,4 +60,22 @@ func TestGetDataWorks(t *testing.T) {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
 	log.Printf("getData response: %+v", res)
+}
+
+func TestGetDataNoTimeout(t *testing.T) {
+	sessionCtx, cancelSession := context.WithCancel(context.Background())
+	client, _ := net.Pipe()
+
+	conn := Conn{conn: client, sessionCtx: sessionCtx, cancelSession: cancelSession}
+	// close conn before sending request
+	conn.Close()
+	_, err := conn.GetData("/")
+	select {
+	case <-time.After(defaultTimeout):
+		t.Fatalf("client should not wait for timeout if connection is closed")
+	default:
+		if err != nil && !errors.Is(errors.Unwrap(err), io.ErrClosedPipe) {
+			t.Fatalf("unexpected error calling GetData: %v", err)
+		}
+	}
 }
