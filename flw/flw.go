@@ -63,13 +63,13 @@ func (c *Client) Srvr(servers []string) ([]*ServerStats, bool) {
 		var srvrMode Mode
 		switch match[10] {
 		case "leader":
-			srvrMode = modeLeader
+			srvrMode = ModeLeader
 		case "follower":
-			srvrMode = modeFollower
+			srvrMode = ModeFollower
 		case "standalone":
-			srvrMode = modeStandalone
+			srvrMode = ModeStandalone
 		default:
-			srvrMode = modeUnknown
+			srvrMode = ModeUnknown
 		}
 
 		buildTime, err := time.Parse("01/02/2006 15:04 MST", match[1])

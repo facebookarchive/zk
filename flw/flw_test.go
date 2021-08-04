@@ -90,7 +90,7 @@ func TestSrvr(t *testing.T) {
 		Outstanding: 1,
 		Epoch:       17,
 		Counter:     175804215,
-		Mode:        modeLeader,
+		Mode:        ModeLeader,
 		Version:     "3.4.6-1569965",
 	}
 	stats := statsSlice[0]
