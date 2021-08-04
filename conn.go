@@ -123,33 +123,64 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 		Type: opGetData,
 	}
 	request := &proto.GetDataRequest{
-		Path:  path,
-		Watch: false,
+		Path: path,
 	}
+	reply := &proto.GetDataResponse{}
+	pending, err := c.sendRequest(header, request, reply)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case <-pending.done:
+		return reply.Data, nil
+	case <-c.sessionCtx.Done():
+		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
+	case <-time.After(c.sessionTimeout):
+		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
+	}
+}
+
+func (c *Conn) GetChildren(path string) ([]string, error) {
+	header := &proto.RequestHeader{
+		Xid:  c.getXid(),
+		Type: opGetChildren,
+	}
+	request := &proto.GetChildrenRequest{Path: path}
+	reply := &proto.GetChildrenResponse{}
+
+	pending, err := c.sendRequest(header, request, reply)
+	if err != nil {
+		return nil, err
+	}
+
+	select {
+	case <-pending.done:
+		return reply.Children, nil
+	case <-c.sessionCtx.Done():
+		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
+	case <-time.After(c.sessionTimeout):
+		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
+	}
+}
+
+func (c *Conn) sendRequest(header *proto.RequestHeader, request jute.RecordWriter, reply jute.RecordReader) (*pendingRequest, error) {
 	sendBuf, err := serializeWriters(header, request)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing request: %v", err)
 	}
-	r := &proto.GetDataResponse{}
-	pending := pendingRequest{
-		reply: r,
+
+	pending := &pendingRequest{
+		reply: reply,
 		done:  make(chan struct{}, 1),
 	}
 
 	c.reqs.Store(header.Xid, pending)
 
 	if _, err = c.conn.Write(sendBuf); err != nil {
-		return nil, fmt.Errorf("error writing GetData request to net.conn: %w", err)
+		return nil, fmt.Errorf("error writing request to net.conn: %w", err)
 	}
-
-	select {
-	case <-pending.done:
-		return r.Data, nil
-	case <-c.sessionCtx.Done():
-		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
-	case <-time.After(c.sessionTimeout):
-		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
-	}
+	return pending, nil
 }
 
 func (c *Conn) handleReads() {
@@ -180,10 +211,10 @@ func (c *Conn) handleReads() {
 
 			value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
 			if ok {
-				pending := value.(pendingRequest)
+				pending := value.(*pendingRequest)
 				if err = dec.ReadRecord(pending.reply); err != nil {
 					log.Printf("could not decode response struct: %v", err)
-					break
+					return
 				}
 
 				pending.done <- struct{}{}
