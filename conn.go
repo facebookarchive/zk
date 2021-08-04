@@ -127,20 +127,14 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	request := &proto.GetDataRequest{
 		Path: path,
 	}
-	reply := &proto.GetDataResponse{}
-	pending, err := c.sendRequest(header, request, reply)
+	response := &proto.GetDataResponse{}
+
+	reply, err := c.sendAndWait(header, request, response)
 	if err != nil {
 		return nil, err
 	}
 
-	select {
-	case <-pending.done:
-		return reply.Data, nil
-	case <-c.sessionCtx.Done():
-		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
-	case <-time.After(c.sessionTimeout):
-		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
-	}
+	return reply.(*proto.GetDataResponse).Data, nil
 }
 
 func (c *Conn) GetChildren(path string) ([]string, error) {
@@ -149,24 +143,17 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 		Type: opGetChildren,
 	}
 	request := &proto.GetChildrenRequest{Path: path}
-	reply := &proto.GetChildrenResponse{}
+	response := &proto.GetChildrenResponse{}
 
-	pending, err := c.sendRequest(header, request, reply)
+	reply, err := c.sendAndWait(header, request, response)
 	if err != nil {
 		return nil, err
 	}
 
-	select {
-	case <-pending.done:
-		return reply.Children, nil
-	case <-c.sessionCtx.Done():
-		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
-	case <-time.After(c.sessionTimeout):
-		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
-	}
+	return reply.(*proto.GetChildrenResponse).Children, nil
 }
 
-func (c *Conn) sendRequest(header *proto.RequestHeader, request jute.RecordWriter, reply jute.RecordReader) (*pendingRequest, error) {
+func (c *Conn) sendAndWait(header *proto.RequestHeader, request jute.RecordWriter, reply jute.RecordReader) (jute.RecordReader, error) {
 	sendBuf, err := serializeWriters(header, request)
 	if err != nil {
 		return nil, fmt.Errorf("error serializing request: %v", err)
@@ -182,7 +169,15 @@ func (c *Conn) sendRequest(header *proto.RequestHeader, request jute.RecordWrite
 	if _, err = c.conn.Write(sendBuf); err != nil {
 		return nil, fmt.Errorf("error writing request to net.conn: %w", err)
 	}
-	return pending, nil
+
+	select {
+	case <-pending.done:
+		return reply, nil
+	case <-c.sessionCtx.Done():
+		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
+	case <-time.After(c.sessionTimeout):
+		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
+	}
 }
 
 func (c *Conn) handleReads() {
