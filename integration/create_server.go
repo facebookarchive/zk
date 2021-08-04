@@ -22,6 +22,7 @@ const defaultArchiveName = "server.tar.gz"
 const defaultConfigName = "zk.cfg"
 const maxRetries = 10
 
+// ZKServer represents a configurable Zookeeper server, mainly used for integration testing.
 type ZKServer struct {
 	Version string
 	Config  *ServerConfig
@@ -62,7 +63,7 @@ func (server *ZKServer) Run() error {
 	if _, err := os.Stat(archivePath); os.IsNotExist(err) {
 		err = downloadToFile(zkURL, archivePath)
 		if err != nil {
-			return fmt.Errorf("error downloading file: %s\n", err)
+			return fmt.Errorf("error downloading file: %s", err)
 		}
 		log.Printf("successfully downloaded archive %s\n", defaultArchiveName)
 	}
@@ -71,14 +72,14 @@ func (server *ZKServer) Run() error {
 	if _, err := os.Stat(filepath.Join(workdir, dirName)); os.IsNotExist(err) {
 		_, err := extractTarGz(archivePath)
 		if err != nil {
-			return fmt.Errorf("error extracting file: %s\n", err)
+			return fmt.Errorf("error extracting file: %s", err)
 		}
 	}
 
 	serverScriptPath := filepath.Join(workdir, dirName, "bin/zkServer.sh")
 	err = os.Chmod(serverScriptPath, 0777)
 	if err != nil {
-		return fmt.Errorf("error changing server script permissions: %s\n", err)
+		return fmt.Errorf("error changing server script permissions: %s", err)
 	}
 
 	server.cmd = exec.Command(serverScriptPath, "start-foreground", filepath.Join(workdir, defaultConfigName))
@@ -87,7 +88,7 @@ func (server *ZKServer) Run() error {
 
 	err = server.cmd.Start()
 	if err != nil {
-		return fmt.Errorf("error executing server command: %s\n", err)
+		return fmt.Errorf("error executing server command: %s", err)
 	}
 
 	if err = waitForStart([]string{"0.0.0.0"}, maxRetries, time.Second); err != nil {
@@ -97,6 +98,7 @@ func (server *ZKServer) Run() error {
 	return nil
 }
 
+// Shutdown kills the underlying process of a ZKServer instance.
 func (server *ZKServer) Shutdown() error {
 	log.Printf("Shutdown() called, killing server process")
 	return server.cmd.Process.Kill()
