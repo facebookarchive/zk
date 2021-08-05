@@ -5,6 +5,7 @@ const (
 
 	pingXID = -2
 
-	opPing    = 11
-	opGetData = 4
+	opGetData     = 4
+	opGetChildren = 8
+	opPing        = 11
 )
