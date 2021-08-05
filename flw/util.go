@@ -8,7 +8,7 @@ import (
 // FormatServers takes a slice of addresses, and makes sure they are in a format
 // that resembles <addr>:<port>. If the server has no port provided, the
 // defaultPort constant is added to the end.
-func FormatServers(servers []string) []string {
+func FormatServers(servers ...string) []string {
 	srvs := make([]string, len(servers))
 	for i, addr := range servers {
 		if strings.Contains(addr, ":") {

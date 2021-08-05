@@ -34,11 +34,7 @@ func TestRuok(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	oks := Ruok([]string{l.Addr().String()})
-	if len(oks) == 0 {
-		t.Errorf("No values returned")
-	}
-	if !oks[0] {
+	if !Ruok(l.Addr().String()) {
 		t.Errorf("Instance should be marked as OK")
 	}
 
@@ -53,11 +49,7 @@ func TestRuok(t *testing.T) {
 
 	go tcpServer(l, "dead")
 
-	oks = Ruok([]string{l.Addr().String()})
-	if len(oks) == 0 {
-		t.Errorf("No values returned")
-	}
-	if oks[0] {
+	if Ruok(l.Addr().String()) {
 		t.Errorf("Instance should be marked as not OK")
 	}
 }
@@ -72,12 +64,12 @@ func TestSrvr(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	statsSlice, ok := Srvr([]string{l.Addr().String()})
+	serverStats, ok := Srvr(l.Addr().String())
 	if !ok {
-		t.Errorf("Failure indicated on 'srvr' parsing")
+		t.Fatalf("Failure indicated on 'srvr' parsing")
 	}
-	if len(statsSlice) == 0 {
-		t.Errorf("No *ServerStats instances returned")
+	if serverStats == nil {
+		t.Fatalf("No *ServerStats instances returned")
 	}
 	expected := &ServerStats{
 		Sent:        4220,
@@ -93,58 +85,57 @@ func TestSrvr(t *testing.T) {
 		Mode:        ModeLeader,
 		Version:     "3.4.6-1569965",
 	}
-	stats := statsSlice[0]
 
-	if stats.Error != nil {
-		t.Fatalf("Unexpected error seen in stats: %v", err.Error())
+	if serverStats.Error != nil {
+		t.Fatalf("Unexpected error seen in stats: %v", serverStats.Error)
 	}
 
-	if stats.Sent != expected.Sent {
-		t.Errorf("Sent value mismatch (expected %d, got %d)", stats.Sent, expected.Sent)
+	if serverStats.Sent != expected.Sent {
+		t.Fatalf("Sent value mismatch (expected %d, got %d)", serverStats.Sent, expected.Sent)
 	}
 
-	if stats.Received != expected.Received {
-		t.Errorf("Received value mismatch (expected %d, got %d)", stats.Received, expected.Received)
+	if serverStats.Received != expected.Received {
+		t.Fatalf("Received value mismatch (expected %d, got %d)", serverStats.Received, expected.Received)
 	}
 
-	if stats.NodeCount != expected.NodeCount {
-		t.Errorf("NodeCount value mismatch (expected %d, got %d)", stats.NodeCount, expected.NodeCount)
+	if serverStats.NodeCount != expected.NodeCount {
+		t.Fatalf("NodeCount value mismatch (expected %d, got %d)", serverStats.NodeCount, expected.NodeCount)
 	}
 
-	if stats.MinLatency != expected.MinLatency {
-		t.Errorf("MinLatency value mismatch (expected %d, got %d)", stats.MinLatency, expected.MinLatency)
+	if serverStats.MinLatency != expected.MinLatency {
+		t.Fatalf("MinLatency value mismatch (expected %d, got %d)", serverStats.MinLatency, expected.MinLatency)
 	}
 
-	if stats.AvgLatency != expected.AvgLatency {
-		t.Errorf("AvgLatency value mismatch (expected %f, got %f)", stats.AvgLatency, expected.AvgLatency)
+	if serverStats.AvgLatency != expected.AvgLatency {
+		t.Fatalf("AvgLatency value mismatch (expected %f, got %f)", serverStats.AvgLatency, expected.AvgLatency)
 	}
 
-	if stats.MaxLatency != expected.MaxLatency {
-		t.Errorf("MaxLatency value mismatch (expected %d, got %d)", stats.MaxLatency, expected.MaxLatency)
+	if serverStats.MaxLatency != expected.MaxLatency {
+		t.Fatalf("MaxLatency value mismatch (expected %d, got %d)", serverStats.MaxLatency, expected.MaxLatency)
 	}
 
-	if stats.Connections != expected.Connections {
-		t.Errorf("Connection value mismatch (expected %d, got %d)", stats.Connections, expected.Connections)
+	if serverStats.Connections != expected.Connections {
+		t.Fatalf("Connection value mismatch (expected %d, got %d)", serverStats.Connections, expected.Connections)
 	}
 
-	if stats.Outstanding != expected.Outstanding {
-		t.Errorf("Outstanding value mismatch (expected %d, got %d)", stats.Outstanding, expected.Outstanding)
+	if serverStats.Outstanding != expected.Outstanding {
+		t.Fatalf("Outstanding value mismatch (expected %d, got %d)", serverStats.Outstanding, expected.Outstanding)
 	}
 
-	if stats.Epoch != expected.Epoch {
-		t.Errorf("Epoch value mismatch (expected %d, got %d)", stats.Epoch, expected.Epoch)
+	if serverStats.Epoch != expected.Epoch {
+		t.Fatalf("Epoch value mismatch (expected %d, got %d)", serverStats.Epoch, expected.Epoch)
 	}
 
-	if stats.Counter != expected.Counter {
-		t.Errorf("Counter value mismatch (expected %d, got %d)", stats.Counter, expected.Counter)
+	if serverStats.Counter != expected.Counter {
+		t.Fatalf("Counter value mismatch (expected %d, got %d)", serverStats.Counter, expected.Counter)
 	}
 
-	if stats.Mode != expected.Mode {
-		t.Errorf("Mode value mismatch (expected %v, got %v)", stats.Mode, expected.Mode)
+	if serverStats.Mode != expected.Mode {
+		t.Fatalf("Mode value mismatch (expected %v, got %v)", serverStats.Mode, expected.Mode)
 	}
 
-	if stats.Version != expected.Version {
-		t.Errorf("Mode value mismatch (expected %v, got %v)", stats.Version, expected.Version)
+	if serverStats.Version != expected.Version {
+		t.Fatalf("Mode value mismatch (expected %v, got %v)", serverStats.Version, expected.Version)
 	}
 }
 
@@ -158,12 +149,9 @@ func TestCons(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	clients, ok := Cons([]string{l.Addr().String()})
+	clients, ok := Cons(l.Addr().String())
 	if !ok {
-		t.Errorf("failure indicated on 'cons' parsing")
-	}
-	if len(clients) == 0 {
-		t.Errorf("no *ServerClients instances returned")
+		t.Fatalf("failure indicated on 'cons' parsing")
 	}
 
 	results := []*ServerClient{
@@ -220,77 +208,71 @@ func TestCons(t *testing.T) {
 		},
 	}
 
-	for _, z := range clients {
-		if z.Error != nil {
-			t.Errorf("error seen: %v", err.Error())
+	for i, v := range clients.Clients {
+		c := results[i]
+
+		if v.Error != nil {
+			t.Errorf("Unexpected client error: %s", err.Error())
 		}
 
-		for i, v := range z.Clients {
-			c := results[i]
+		if v.Queued != c.Queued {
+			t.Errorf("Queued value mismatch (expected %d, got %d)", v.Queued, c.Queued)
+		}
 
-			if v.Error != nil {
-				t.Errorf("Unexpected client error: %s", err.Error())
-			}
+		if v.Received != c.Received {
+			t.Errorf("Received value mismatch (expected %d, got %d)", v.Received, c.Received)
+		}
 
-			if v.Queued != c.Queued {
-				t.Errorf("Queued value mismatch (expected %d, got %d)", v.Queued, c.Queued)
-			}
+		if v.Sent != c.Sent {
+			t.Errorf("Sent value mismatch (expected %d, got %d)", v.Sent, c.Sent)
+		}
 
-			if v.Received != c.Received {
-				t.Errorf("Received value mismatch (expected %d, got %d)", v.Received, c.Received)
-			}
+		if v.SessionID != c.SessionID {
+			t.Errorf("SessionID value mismatch (expected %d, got %d)", v.SessionID, c.SessionID)
+		}
 
-			if v.Sent != c.Sent {
-				t.Errorf("Sent value mismatch (expected %d, got %d)", v.Sent, c.Sent)
-			}
+		if v.LastOperation != c.LastOperation {
+			t.Errorf("LastOperation value mismatch (expected %v, got %v)", v.LastOperation, c.LastOperation)
+		}
 
-			if v.SessionID != c.SessionID {
-				t.Errorf("SessionID value mismatch (expected %d, got %d)", v.SessionID, c.SessionID)
-			}
+		if v.Timeout != c.Timeout {
+			t.Errorf("Timeout value mismatch (expected %d, got %d)", v.Timeout, c.Timeout)
+		}
 
-			if v.LastOperation != c.LastOperation {
-				t.Errorf("LastOperation value mismatch (expected %v, got %v)", v.LastOperation, c.LastOperation)
-			}
+		if v.Lcxid != c.Lcxid {
+			t.Errorf("Lcxid value mismatch (expected %d, got %d)", v.Lcxid, c.Lcxid)
+		}
 
-			if v.Timeout != c.Timeout {
-				t.Errorf("Timeout value mismatch (expected %d, got %d)", v.Timeout, c.Timeout)
-			}
+		if v.Lzxid != c.Lzxid {
+			t.Errorf("Lzxid value mismatch (expected %d, got %d)", v.Lzxid, c.Lzxid)
+		}
 
-			if v.Lcxid != c.Lcxid {
-				t.Errorf("Lcxid value mismatch (expected %d, got %d)", v.Lcxid, c.Lcxid)
-			}
+		if v.LastLatency != c.LastLatency {
+			t.Errorf("LastLatency value mismatch (expected %d, got %d)", v.LastLatency, c.LastLatency)
+		}
 
-			if v.Lzxid != c.Lzxid {
-				t.Errorf("Lzxid value mismatch (expected %d, got %d)", v.Lzxid, c.Lzxid)
-			}
+		if v.MinLatency != c.MinLatency {
+			t.Errorf("MinLatency value mismatch (expected %d, got %d)", v.MinLatency, c.MinLatency)
+		}
 
-			if v.LastLatency != c.LastLatency {
-				t.Errorf("LastLatency value mismatch (expected %d, got %d)", v.LastLatency, c.LastLatency)
-			}
+		if v.AvgLatency != c.AvgLatency {
+			t.Errorf("AvgLatency value mismatch (expected %d, got %d)", v.AvgLatency, c.AvgLatency)
+		}
 
-			if v.MinLatency != c.MinLatency {
-				t.Errorf("MinLatency value mismatch (expected %d, got %d)", v.MinLatency, c.MinLatency)
-			}
+		if v.MaxLatency != c.MaxLatency {
+			t.Errorf("MaxLatency value mismatch (expected %d, got %d)", v.MaxLatency, c.MaxLatency)
+		}
 
-			if v.AvgLatency != c.AvgLatency {
-				t.Errorf("AvgLatency value mismatch (expected %d, got %d)", v.AvgLatency, c.AvgLatency)
-			}
+		if v.Addr != c.Addr {
+			t.Errorf("Addr value mismatch (expected %v, got %v)", v.Addr, c.Addr)
+		}
 
-			if v.MaxLatency != c.MaxLatency {
-				t.Errorf("MaxLatency value mismatch (expected %d, got %d)", v.MaxLatency, c.MaxLatency)
-			}
+		if !c.Established.Equal(v.Established) {
+			t.Errorf("Established value mismatch (expected %v, got %v)", c.Established, v.Established)
+		}
 
-			if v.Addr != c.Addr {
-				t.Errorf("Addr value mismatch (expected %v, got %v)", v.Addr, c.Addr)
-			}
-
-			if !c.Established.Equal(v.Established) {
-				t.Errorf("Established value mismatch (expected %v, got %v)", c.Established, v.Established)
-			}
-
-			if !c.LastResponse.Equal(v.LastResponse) {
-				t.Errorf("Established value mismatch (expected %v, got %v)", c.LastResponse, v.LastResponse)
-			}
+		if !c.LastResponse.Equal(v.LastResponse) {
+			t.Errorf("Established value mismatch (expected %v, got %v)", c.LastResponse, v.LastResponse)
 		}
 	}
 }
