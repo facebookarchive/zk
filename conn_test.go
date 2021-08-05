@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -104,19 +105,7 @@ func TestGetChildrenDefault(t *testing.T) {
 		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
 
-	if !equal(expected, res) {
+	if !reflect.DeepEqual(expected, res) {
 		t.Fatalf("getChildren error: expected %v, got %v", expected, res)
 	}
-}
-
-func equal(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
 }
