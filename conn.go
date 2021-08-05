@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/facebookincubator/zk/internal/data"
 	"github.com/facebookincubator/zk/internal/proto"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -135,6 +136,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	return reply.(*proto.GetDataResponse).Data, nil
 }
 
+// GetChildren returns all children of a node at the given path, if they exist.
 func (c *Conn) GetChildren(path string) ([]string, error) {
 	header := &proto.RequestHeader{
 		Xid:  c.getXid(),
@@ -149,6 +151,24 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 	}
 
 	return reply.(*proto.GetChildrenResponse).Children, nil
+}
+
+// Create creates a node with the given path, flags and access control list (ACL).
+// The node path is returned upon successful creation.
+func (c *Conn) Create(path string, data []byte, flags int32, acl []data.ACL) (string, error) {
+	header := &proto.RequestHeader{
+		Xid:  c.getXid(),
+		Type: opCreate,
+	}
+	request := &proto.CreateRequest{Path: path, Data: data, Flags: flags, Acl: acl}
+	response := &proto.CreateResponse{}
+
+	reply, err := c.sendAndWait(header, request, response)
+	if err != nil {
+		return "", err
+	}
+
+	return reply.(*proto.CreateResponse).Path, nil
 }
 
 func (c *Conn) sendAndWait(header *proto.RequestHeader, request jute.RecordWriter, reply jute.RecordReader) (jute.RecordReader, error) {

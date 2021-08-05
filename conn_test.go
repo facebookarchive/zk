@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -77,5 +78,47 @@ func TestGetDataNoTimeout(t *testing.T) {
 		if err != nil && !errors.Is(errors.Unwrap(err), io.ErrClosedPipe) {
 			t.Fatalf("unexpected error calling GetData: %v", err)
 		}
+	}
+}
+
+func TestConn_Create_GetChildren(t *testing.T) {
+	cfg := integration.DefaultConfig()
+
+	server, err := integration.NewZKServer("3.6.2", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error while initializing zk server: %v", err)
+	}
+	defer server.Shutdown()
+	if err = server.Run(); err != nil {
+		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
+		return
+	}
+
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer conn.Close()
+
+	// create parent node
+	if _, err = conn.Create("/test", []byte("test"), 0, WorldACL(PermAll)); err != nil {
+		t.Fatalf("unexpected error calling Create: %v", err)
+	}
+
+	// create children nodes
+	expected := []string{"1", "2", "3"}
+	for _, child := range expected {
+		if _, err = conn.Create("/test/"+child, []byte("test"), 0, WorldACL(PermAll)); err != nil {
+			t.Fatalf("unexpected error calling Create: %v", err)
+		}
+	}
+
+	res, err := conn.GetChildren("/test")
+	if err != nil {
+		t.Fatalf("unexpected error calling GetChildren: %v", err)
+	}
+
+	if !reflect.DeepEqual(expected, res) {
+		t.Fatalf("getChildren error: expected %v, got %v", expected, res)
 	}
 }

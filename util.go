@@ -7,6 +7,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/facebookincubator/zk/internal/data"
+
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
@@ -16,6 +18,13 @@ type Client struct {
 	// Dialer is a function to be used to establish a connection to a single host.
 	Dialer  func(ctx context.Context, network, addr string) (net.Conn, error)
 	Timeout time.Duration
+}
+
+// WorldACL produces an ACL list containing a single ACL which uses the
+// provided permissions, with the scheme "world", and ID "anyone", which
+// is used by ZooKeeper to represent any user at all.
+func WorldACL(perms int32) []data.ACL {
+	return []data.ACL{{Perms: perms, Id: data.Id{Scheme: "world", Id: "anyone"}}}
 }
 
 type pendingRequest struct {
