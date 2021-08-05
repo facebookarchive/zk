@@ -79,7 +79,7 @@ func TestGetDataNoTimeout(t *testing.T) {
 		}
 	}
 }
-func TestGetChildren_Default(t *testing.T) {
+func TestGetChildrenDefault(t *testing.T) {
 	cfg := integration.DefaultConfig()
 
 	server, err := integration.NewZKServer("3.6.2", cfg)

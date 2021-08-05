@@ -123,7 +123,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	request := &proto.GetDataRequest{Path: path}
 	response := &proto.GetDataResponse{}
 
-	if err := c.sendAndWait(opGetData, request, response); err != nil {
+	if err := c.rpc(opGetData, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetData request: %w", err)
 	}
 
@@ -135,26 +135,26 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 	request := &proto.GetChildrenRequest{Path: path}
 	response := &proto.GetChildrenResponse{}
 
-	if err := c.sendAndWait(opGetChildren, request, response); err != nil {
+	if err := c.rpc(opGetChildren, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetChildren request: %w", err)
 	}
 
 	return response.Children, nil
 }
 
-func (c *Conn) sendAndWait(opcode int32, request jute.RecordWriter, reply jute.RecordReader) error {
+func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error {
 	header := &proto.RequestHeader{
 		Xid:  c.getXid(),
 		Type: opcode,
 	}
 
-	sendBuf, err := serializeWriters(header, request)
+	sendBuf, err := serializeWriters(header, w)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
 
 	pending := &pendingRequest{
-		reply: reply,
+		reply: r,
 		done:  make(chan struct{}, 1),
 	}
 
