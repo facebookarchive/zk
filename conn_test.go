@@ -80,6 +80,35 @@ func TestGetDataNoTimeout(t *testing.T) {
 		}
 	}
 }
+func TestGetChildren_Default(t *testing.T) {
+	cfg := integration.DefaultConfig()
+
+	server, err := integration.NewZKServer("3.6.2", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error while initializing zk server: %v", err)
+	}
+	defer server.Shutdown()
+	if err = server.Run(); err != nil {
+		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
+		return
+	}
+
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer conn.Close()
+
+	expected := []string{"zookeeper"}
+	res, err := conn.GetChildren("/")
+	if err != nil {
+		t.Fatalf("unexpected error calling GetChildren: %v", err)
+	}
+
+	if !reflect.DeepEqual(expected, res) {
+		t.Fatalf("getChildren error: expected %v, got %v", expected, res)
+	}
+}
 
 func TestConn_Create_GetChildren(t *testing.T) {
 	cfg := integration.DefaultConfig()
