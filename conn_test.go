@@ -79,3 +79,46 @@ func TestGetDataNoTimeout(t *testing.T) {
 		}
 	}
 }
+func TestGetChildren_Default(t *testing.T) {
+	cfg := integration.DefaultConfig()
+
+	server, err := integration.NewZKServer("3.6.2", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error while initializing zk server: %v", err)
+	}
+	defer server.Shutdown()
+	if err = server.Run(); err != nil {
+		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
+		return
+	}
+
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer conn.Close()
+
+	expected := []string{"zookeeper"}
+	res, err := conn.GetChildren("/")
+	if err != nil {
+		t.Fatalf("unexpected error calling GetChildren: %v", err)
+	}
+
+	if !Equal(expected, res) {
+		t.Fatalf("getChildren error: expected %v, got %v", expected, res)
+	}
+}
+
+// Equal tells whether a and b contain the same elements.
+// A nil argument is equivalent to an empty slice.
+func Equal(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
+}
