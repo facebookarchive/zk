@@ -84,8 +84,7 @@ func (c *Conn) Close() error {
 func (c *Conn) authenticate() error {
 	// create and encode request for zk server
 	request := &proto.ConnectRequest{
-		ProtocolVersion: defaultProtocolVersion,
-		TimeOut:         int32(c.sessionTimeout.Milliseconds()),
+		TimeOut: int32(c.sessionTimeout.Milliseconds()),
 	}
 
 	sendBuf, err := serializeWriters(request)
