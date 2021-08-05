@@ -45,14 +45,13 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		defaultDialer := &net.Dialer{}
 		client.Dialer = defaultDialer.DialContext
 	}
-	sessionCtx, cancel := context.WithCancel(context.Background())
 
 	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
-		cancel()
 		return nil, fmt.Errorf("error dialing ZK server: %v", err)
 	}
 
+	sessionCtx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
 		conn:           conn,
 		sessionTimeout: defaultTimeout,
