@@ -104,14 +104,12 @@ func TestGetChildren_Default(t *testing.T) {
 		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
 
-	if !Equal(expected, res) {
+	if !equal(expected, res) {
 		t.Fatalf("getChildren error: expected %v, got %v", expected, res)
 	}
 }
 
-// Equal tells whether a and b contain the same elements.
-// A nil argument is equivalent to an empty slice.
-func Equal(a, b []string) bool {
+func equal(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
 	}

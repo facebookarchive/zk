@@ -120,43 +120,37 @@ func (c *Conn) authenticate() error {
 
 // GetData calls Get on a Zookeeper server's node using the specified path and returns the server's response.
 func (c *Conn) GetData(path string) ([]byte, error) {
-	header := &proto.RequestHeader{
-		Xid:  c.getXid(),
-		Type: opGetData,
-	}
-	request := &proto.GetDataRequest{
-		Path: path,
-	}
+	request := &proto.GetDataRequest{Path: path}
 	response := &proto.GetDataResponse{}
 
-	reply, err := c.sendAndWait(header, request, response)
-	if err != nil {
-		return nil, err
+	if err := c.sendAndWait(opGetData, request, response); err != nil {
+		return nil, fmt.Errorf("error sending GetData request: %w", err)
 	}
 
-	return reply.(*proto.GetDataResponse).Data, nil
+	return response.Data, nil
 }
 
+// GetChildren returns all children of a node at the given path, if they exist.
 func (c *Conn) GetChildren(path string) ([]string, error) {
-	header := &proto.RequestHeader{
-		Xid:  c.getXid(),
-		Type: opGetChildren,
-	}
 	request := &proto.GetChildrenRequest{Path: path}
 	response := &proto.GetChildrenResponse{}
 
-	reply, err := c.sendAndWait(header, request, response)
-	if err != nil {
-		return nil, err
+	if err := c.sendAndWait(opGetChildren, request, response); err != nil {
+		return nil, fmt.Errorf("error sending GetChildren request: %w", err)
 	}
 
-	return reply.(*proto.GetChildrenResponse).Children, nil
+	return response.Children, nil
 }
 
-func (c *Conn) sendAndWait(header *proto.RequestHeader, request jute.RecordWriter, reply jute.RecordReader) (jute.RecordReader, error) {
+func (c *Conn) sendAndWait(opcode int32, request jute.RecordWriter, reply jute.RecordReader) error {
+	header := &proto.RequestHeader{
+		Xid:  c.getXid(),
+		Type: opcode,
+	}
+
 	sendBuf, err := serializeWriters(header, request)
 	if err != nil {
-		return nil, fmt.Errorf("error serializing request: %v", err)
+		return fmt.Errorf("error serializing request: %v", err)
 	}
 
 	pending := &pendingRequest{
@@ -167,16 +161,16 @@ func (c *Conn) sendAndWait(header *proto.RequestHeader, request jute.RecordWrite
 	c.reqs.Store(header.Xid, pending)
 
 	if _, err = c.conn.Write(sendBuf); err != nil {
-		return nil, fmt.Errorf("error writing request to net.conn: %w", err)
+		return fmt.Errorf("error writing request to net.conn: %w", err)
 	}
 
 	select {
 	case <-pending.done:
-		return reply, nil
+		return nil
 	case <-c.sessionCtx.Done():
-		return nil, fmt.Errorf("session closed: %w", c.sessionCtx.Err())
+		return fmt.Errorf("session closed: %w", c.sessionCtx.Err())
 	case <-time.After(c.sessionTimeout):
-		return nil, fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
+		return fmt.Errorf("got a timeout waiting on response for xid %d", header.Xid)
 	}
 }
 

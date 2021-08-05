@@ -7,6 +7,5 @@ const (
 
 	opGetData     = 4
 	opGetChildren = 8
-
-	opPing = 11
+	opPing        = 11
 )
