@@ -225,7 +225,6 @@ func parseInt64(s string) (int64, error) {
 }
 
 func fourLetterWord(server, command string, timeout time.Duration) ([]byte, error) {
-	server = FormatServers(server)[0]
 	conn, err := net.DialTimeout("tcp", server, timeout)
 	if err != nil {
 		return nil, err
