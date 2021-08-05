@@ -23,14 +23,14 @@ func main() {
 
 	data, err := conn.GetData(*path)
 	if err != nil {
-		fmt.Println("getdata error:", err)
+		fmt.Println("getData error:", err)
 		return
 	}
 	fmt.Printf("Data for node %s: %v\n", *path, string(data))
 
 	children, err := conn.GetChildren(*path)
 	if err != nil {
-		fmt.Println("getdata error:", err)
+		fmt.Println("getChildren error:", err)
 		return
 	}
 
