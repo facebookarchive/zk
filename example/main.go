@@ -12,7 +12,6 @@ import (
 func main() {
 	path := flag.String("path", "/", "Znode path from which to get data.")
 	address := flag.String("server", "127.0.0.1:2181", "Zookeeper server address.")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	client := zk.Client{}
@@ -27,6 +26,13 @@ func main() {
 		fmt.Println("getdata error:", err)
 		return
 	}
+	fmt.Printf("Data for node %s: %v\n", *path, string(data))
 
-	fmt.Println("got data: ", string(data))
+	children, err := conn.GetChildren(*path)
+	if err != nil {
+		fmt.Println("getdata error:", err)
+		return
+	}
+
+	fmt.Printf("Children of node %s: %v\n", *path, children)
 }
