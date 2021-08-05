@@ -130,7 +130,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 
 	reply, err := c.sendAndWait(header, request, response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error calling GetData: %w", err)
 	}
 
 	return reply.(*proto.GetDataResponse).Data, nil
@@ -147,7 +147,7 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 
 	reply, err := c.sendAndWait(header, request, response)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error calling GetChildren: %w", err)
 	}
 
 	return reply.(*proto.GetChildrenResponse).Children, nil
@@ -165,7 +165,7 @@ func (c *Conn) Create(path string, data []byte, flags int32, acl []data.ACL) (st
 
 	reply, err := c.sendAndWait(header, request, response)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error calling Create: %w", err)
 	}
 
 	return reply.(*proto.CreateResponse).Path, nil
