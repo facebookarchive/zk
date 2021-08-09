@@ -45,14 +45,13 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		defaultDialer := &net.Dialer{}
 		client.Dialer = defaultDialer.DialContext
 	}
-	sessionCtx, cancel := context.WithCancel(context.Background())
 
 	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
-		cancel()
 		return nil, fmt.Errorf("error dialing ZK server: %v", err)
 	}
 
+	sessionCtx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
 		conn:           conn,
 		sessionTimeout: defaultTimeout,
@@ -60,8 +59,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		sessionCtx:     sessionCtx,
 	}
 
-	if client.Timeout != 0 {
-		c.sessionTimeout = client.Timeout
+	if client.DialTimeout != 0 {
+		c.sessionTimeout = client.DialTimeout
 	}
 	if err = c.authenticate(); err != nil {
 		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
@@ -84,8 +83,7 @@ func (c *Conn) Close() error {
 func (c *Conn) authenticate() error {
 	// create and encode request for zk server
 	request := &proto.ConnectRequest{
-		ProtocolVersion: defaultProtocolVersion,
-		TimeOut:         int32(c.sessionTimeout.Milliseconds()),
+		TimeOut: int32(c.sessionTimeout.Milliseconds()),
 	}
 
 	sendBuf, err := serializeWriters(request)
