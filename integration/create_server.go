@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -92,7 +91,7 @@ func (server *ZKServer) Run() error {
 		return fmt.Errorf("error executing server command: %s", err)
 	}
 
-	if err = waitForStart("0.0.0.0:"+strconv.Itoa(defaultPort), maxRetries, time.Second); err != nil {
+	if err = waitForStart(fmt.Sprintf("0.0.0.0:%d", server.Config.ClientPort), maxRetries, time.Second); err != nil {
 		return err
 	}
 
