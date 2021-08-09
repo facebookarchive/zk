@@ -32,7 +32,7 @@ func TestRuok(t *testing.T) {
 	}
 	defer l.Close()
 
-	go tcpServer(l, "")
+	go tcpServer(t, l, "")
 
 	if err = Ruok(l.Addr().String()); err != nil {
 		t.Errorf("Instance should be marked as OK")
@@ -47,7 +47,7 @@ func TestRuok(t *testing.T) {
 	}
 	defer l.Close()
 
-	go tcpServer(l, "dead")
+	go tcpServer(t, l, "dead")
 
 	if err = Ruok(l.Addr().String()); err == nil {
 		t.Errorf("Instance should be marked as not OK")
@@ -62,7 +62,7 @@ func TestSrvr(t *testing.T) {
 	}
 	defer l.Close()
 
-	go tcpServer(l, "")
+	go tcpServer(t, l, "")
 
 	serverStats, err := Srvr(l.Addr().String())
 	if err != nil {
@@ -140,7 +140,7 @@ func TestCons(t *testing.T) {
 	}
 	defer l.Close()
 
-	go tcpServer(l, "")
+	go tcpServer(t, l, "")
 
 	clients, err := Cons(l.Addr().String())
 	if err != nil {
@@ -266,17 +266,17 @@ func TestCons(t *testing.T) {
 	}
 }
 
-func tcpServer(listener net.Listener, status string) {
+func tcpServer(t *testing.T, listener net.Listener, status string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		go connHandler(conn, status)
+		go connHandler(t, conn, status)
 	}
 }
 
-func connHandler(conn net.Conn, status string) {
+func connHandler(t *testing.T, conn net.Conn, status string) {
 	defer conn.Close()
 
 	data := make([]byte, 4)
@@ -292,23 +292,35 @@ func connHandler(conn net.Conn, status string) {
 		case "dead":
 			return
 		default:
-			conn.Write([]byte("imok"))
+			if _, err = conn.Write([]byte("imok")); err != nil {
+				t.Logf("error writing to conn: %v", err)
+				return
+			}
 		}
 	case "srvr":
 		switch status {
 		case "dead":
 			return
 		default:
-			conn.Write([]byte(zkSrvrOut))
+			if _, err = conn.Write([]byte(zkSrvrOut)); err != nil {
+				t.Logf("error writing to conn: %v", err)
+				return
+			}
 		}
 	case "cons":
 		switch status {
 		case "dead":
 			return
 		default:
-			conn.Write([]byte(zkConsOut))
+			if _, err = conn.Write([]byte(zkConsOut)); err != nil {
+				t.Logf("error writing to conn: %v", err)
+				return
+			}
 		}
 	default:
-		conn.Write([]byte("This ZooKeeper instance is not currently serving requests."))
+		if _, err = conn.Write([]byte("This ZooKeeper instance is not currently serving requests.")); err != nil {
+			t.Logf("error writing to conn: %v", err)
+			return
+		}
 	}
 }

@@ -40,8 +40,13 @@ func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 
 	// use encoder to prepend request length to the request bytes
 	sendBuf.Reset()
-	enc.WriteBuffer(requestBytes)
-	enc.WriteEnd()
+
+	if err := enc.WriteBuffer(requestBytes); err != nil {
+		return nil, err
+	}
+	if err := enc.WriteEnd(); err != nil {
+		return nil, err
+	}
 
 	return sendBuf.Bytes(), nil
 }
