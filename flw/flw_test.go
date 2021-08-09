@@ -34,7 +34,7 @@ func TestRuok(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	if !Ruok(l.Addr().String()) {
+	if err = Ruok(l.Addr().String()); err != nil {
 		t.Errorf("Instance should be marked as OK")
 	}
 
@@ -49,7 +49,7 @@ func TestRuok(t *testing.T) {
 
 	go tcpServer(l, "dead")
 
-	if Ruok(l.Addr().String()) {
+	if err = Ruok(l.Addr().String()); err == nil {
 		t.Errorf("Instance should be marked as not OK")
 	}
 }
@@ -64,12 +64,9 @@ func TestSrvr(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	serverStats, ok := Srvr(l.Addr().String())
-	if !ok {
-		t.Fatalf("Failure indicated on 'srvr' parsing")
-	}
-	if serverStats == nil {
-		t.Fatalf("No *ServerStats instances returned")
+	serverStats, err := Srvr(l.Addr().String())
+	if err != nil {
+		t.Fatalf("Failure indicated on 'srvr' parsing: %v", err)
 	}
 	expected := &ServerStats{
 		Sent:        4220,
@@ -84,10 +81,6 @@ func TestSrvr(t *testing.T) {
 		Counter:     175804215,
 		Mode:        ModeLeader,
 		Version:     "3.4.6-1569965",
-	}
-
-	if serverStats.Error != nil {
-		t.Fatalf("Unexpected error seen in stats: %v", serverStats.Error)
 	}
 
 	if serverStats.Sent != expected.Sent {
@@ -149,8 +142,8 @@ func TestCons(t *testing.T) {
 
 	go tcpServer(l, "")
 
-	clients, ok := Cons(l.Addr().String())
-	if !ok {
+	clients, err := Cons(l.Addr().String())
+	if err != nil {
 		t.Fatalf("failure indicated on 'cons' parsing")
 	}
 
@@ -212,7 +205,7 @@ func TestCons(t *testing.T) {
 		c := results[i]
 
 		if v.Error != nil {
-			t.Errorf("Unexpected client error: %s", err.Error())
+			t.Errorf("Unexpected client error: %v", err)
 		}
 
 		if v.Queued != c.Queued {

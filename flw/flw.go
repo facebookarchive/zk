@@ -12,15 +12,10 @@ import (
 	"time"
 )
 
-// Srvr is a FourLetterWord helper function. In particular, this function pulls the srvr output
-// from the zookeeper instance and parses the output. A slice of *ServerStats structs are returned
-// as well as a boolean value to indicate whether this function processed successfully.
-//
-// If the boolean value is false there was a problem. If the *ServerStats slice is empty or nil,
-// then the error happened before we started to obtain 'srvr' values. Otherwise, one of the
-// servers had an issue and the "Error" value in the struct should be inspected to determine
-// which server had the issue.
-func (c *Client) Srvr(server string) (*ServerStats, bool) {
+// Srvr is a FourLetterWord helper function. In particular, this function pulls the "srvr" output
+// from the zookeeper instance and parses the output. A *ServerStats struct is returned
+// as well as an error value to indicate whether this function processed successfully.
+func (c *Client) Srvr(server string) (*ServerStats, error) {
 	// different parts of the regular expression that are required to parse the srvr output
 	const (
 		zrVer   = `^Zookeeper version: ([A-Za-z0-9\.\-]+), built on (\d\d/\d\d/\d\d\d\d \d\d:\d\d [A-Za-z0-9:\+\-]+)`
@@ -32,18 +27,18 @@ func (c *Client) Srvr(server string) (*ServerStats, bool) {
 	// build the regex from the pieces above
 	re, err := regexp.Compile(fmt.Sprintf(`(?m:\A%v.*\n%v.*\n%v.*\n%v)`, zrVer, zrLat, zrNet, zrState))
 	if err != nil {
-		return nil, false
+		return nil, fmt.Errorf("error compiling srvr response regex: %w", err)
 	}
 
 	response, err := fourLetterWord(server, "srvr", c.Timeout)
 
 	if err != nil {
-		return &ServerStats{Error: err}, false
+		return nil, fmt.Errorf("invalid srvr response: %w", err)
 	}
 	matches := re.FindAllStringSubmatch(string(response), -1)
 
 	if matches == nil {
-		return &ServerStats{Error: fmt.Errorf("unable to parse fields from zookeeper response (no regex matches)")}, false
+		return nil, fmt.Errorf("unable to parse fields from zookeeper response (no regex matches)")
 	}
 
 	match := matches[0][1:]
@@ -64,13 +59,13 @@ func (c *Client) Srvr(server string) (*ServerStats, bool) {
 	buildTime, err := time.Parse("01/02/2006 15:04 MST", match[1])
 
 	if err != nil {
-		return &ServerStats{Error: err}, false
+		return nil, fmt.Errorf("error parsing srvr response: %w", err)
 	}
 
 	parsedInt, err := strconv.ParseInt(match[9], 0, 64)
 
 	if err != nil {
-		return &ServerStats{Error: err}, false
+		return nil, fmt.Errorf("error parsing srvr response: %w", err)
 	}
 
 	// the ZxID value is an int64 with two int32s packed inside
@@ -104,26 +99,28 @@ func (c *Client) Srvr(server string) (*ServerStats, bool) {
 		BuildTime:   buildTime,
 		Mode:        srvrMode,
 		Version:     match[0],
-	}, true
+	}, nil
 }
 
 // Ruok is a FourLetterWord helper function. In particular, this function
-// pulls the ruok output a server.
-func (c *Client) Ruok(server string) bool {
+// pulls the "ruok" output of a server.
+func (c *Client) Ruok(server string) error {
 	response, err := fourLetterWord(server, "ruok", c.Timeout)
 	if err != nil {
-		return false
+		return fmt.Errorf("error calling ruok FLW: %w", err)
 	}
 
-	return string(response[:4]) == "imok"
+	if string(response[:4]) != "imok" {
+		return fmt.Errorf("invalid ruok response from server: %s", response[:4])
+	}
+
+	return nil
 }
 
 // Cons is a FourLetterWord helper function. In particular, this function
-// pulls the ruok output from a server.
-//
-// As with Srvr, the boolean value indicates whether one of the requests had
-// an issue. The Clients struct has an Error value that can be checked.
-func (c *Client) Cons(server string) (*ServerClients, bool) {
+// pulls the "cons" output from a server.
+// As with Srvr, the error value indicates whether the request had an issue.
+func (c *Client) Cons(server string) (*ServerClients, error) {
 	const (
 		zrAddr = `^ /((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):(?:\d+))\[\d+\]`
 		zrPac  = `\(queued=(\d+),recved=(\d+),sent=(\d+),sid=(0x[A-Za-z0-9]+),lop=(\w+),est=(\d+),to=(\d+),`
@@ -132,13 +129,13 @@ func (c *Client) Cons(server string) (*ServerClients, bool) {
 
 	re, err := regexp.Compile(fmt.Sprintf("%v%v%v", zrAddr, zrPac, zrSesh))
 	if err != nil {
-		return nil, false
+		return nil, fmt.Errorf("error compiling cons response regex: %w", err)
 	}
 
 	response, err := fourLetterWord(server, "cons", c.Timeout)
 
 	if err != nil {
-		return &ServerClients{Error: err}, false
+		return nil, fmt.Errorf("error parsing cons response: %w", err)
 	}
 
 	scan := bufio.NewScanner(bytes.NewReader(response))
@@ -155,8 +152,7 @@ func (c *Client) Cons(server string) (*ServerClients, bool) {
 		m := re.FindAllStringSubmatch(string(line), -1)
 
 		if m == nil {
-			err := fmt.Errorf("unable to parse fields from zookeeper response (no regex matches)")
-			return &ServerClients{Error: err}, false
+			return nil, fmt.Errorf("unable to parse fields from zookeeper response (no regex matches)")
 		}
 
 		match := m[0][1:]
@@ -194,23 +190,23 @@ func (c *Client) Cons(server string) (*ServerClients, bool) {
 		})
 	}
 
-	return &ServerClients{Clients: clients}, true
+	return &ServerClients{Clients: clients}, nil
 }
 
 // Srvr executes the srvr FLW protocol function using the default client.
-func Srvr(server string) (*ServerStats, bool) {
+func Srvr(server string) (*ServerStats, error) {
 	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Srvr(server)
 }
 
 // Ruok executes the ruok FLW protocol function using the default client.
-func Ruok(server string) bool {
+func Ruok(server string) error {
 	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Ruok(server)
 }
 
 // Cons executes the cons FLW protocol function using the default client.
-func Cons(server string) (*ServerClients, bool) {
+func Cons(server string) (*ServerClients, error) {
 	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Cons(server)
 }

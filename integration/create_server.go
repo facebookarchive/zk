@@ -206,8 +206,7 @@ func ensureBaseDir(filepath string) error {
 func waitForStart(address string, maxRetry int, interval time.Duration) error {
 	client := &flw.Client{Timeout: time.Second}
 	for i := 0; i < maxRetry; i++ {
-		_, ok := client.Srvr(address)
-		if ok {
+		if _, err := client.Srvr(address); err == nil {
 			return nil
 		}
 		time.Sleep(interval)
