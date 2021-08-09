@@ -91,7 +91,7 @@ func (server *ZKServer) Run() error {
 		return fmt.Errorf("error executing server command: %s", err)
 	}
 
-	if err = waitForStart(fmt.Sprintf("0.0.0.0:%d", server.Config.ClientPort), maxRetries, time.Second); err != nil {
+	if err = waitForStart(fmt.Sprintf(":%d", server.Config.ClientPort), maxRetries, time.Second); err != nil {
 		return err
 	}
 
