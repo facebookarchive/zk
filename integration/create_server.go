@@ -202,11 +202,11 @@ func ensureBaseDir(filepath string) error {
 	return os.MkdirAll(baseDir, 0755)
 }
 
-// waitForStart blocks until all servers from the specified addresses slice are up
-func waitForStart(addresses string, maxRetry int, interval time.Duration) error {
+// waitForStart blocks until the server from the specified address is up, returns error after max retries otherwise
+func waitForStart(address string, maxRetry int, interval time.Duration) error {
 	client := &flw.Client{Timeout: time.Second}
 	for i := 0; i < maxRetry; i++ {
-		_, ok := client.Srvr(addresses)
+		_, ok := client.Srvr(address)
 		if ok {
 			return nil
 		}
