@@ -35,15 +35,17 @@ type Conn struct {
 // DialContext connects to the ZK server using the default client.
 func DialContext(ctx context.Context, network, address string) (*Conn, error) {
 	defaultClient := Client{}
-	defaultDialer := &net.Dialer{}
-	defaultClient.Dialer = defaultDialer.DialContext
-
 	return defaultClient.DialContext(ctx, network, address)
 }
 
 // DialContext connects the ZK client to the specified Zookeeper server.
 // The provided context is used to determine the dial lifetime.
 func (client *Client) DialContext(ctx context.Context, network, address string) (*Conn, error) {
+	if client.Dialer == nil {
+		defaultDialer := &net.Dialer{}
+		client.Dialer = defaultDialer.DialContext
+	}
+
 	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
 		return nil, fmt.Errorf("error dialing ZK server: %v", err)
