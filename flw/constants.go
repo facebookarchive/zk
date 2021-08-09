@@ -2,8 +2,6 @@ package flw
 
 import "time"
 
-// defaultPort is the default port number on which Zookeeper servers listen for client connections.
-const defaultPort = 2181
 const defaultTimeout = 2 * time.Second
 
 // Mode is used to build custom server modes (leader|follower|standalone).
