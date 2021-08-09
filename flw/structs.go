@@ -15,7 +15,6 @@ type Client struct {
 // This is needed because Cons() takes multiple servers.
 type ServerClients struct {
 	Clients []*ServerClient
-	Error   error
 }
 
 // ServerStats is the information pulled from the Zookeeper `stat` command.
@@ -33,7 +32,6 @@ type ServerStats struct {
 	BuildTime   time.Time
 	Mode        Mode
 	Version     string
-	Error       error
 }
 
 // ServerClient is the information for a single Zookeeper client and its session.
