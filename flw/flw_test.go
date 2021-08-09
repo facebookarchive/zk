@@ -1,6 +1,7 @@
 package flw
 
 import (
+	"log"
 	"net"
 	"testing"
 	"time"
@@ -321,23 +322,35 @@ func connHandler(conn net.Conn, status string) {
 		case "dead":
 			return
 		default:
-			conn.Write([]byte("imok"))
+			if _, err = conn.Write([]byte("imok")); err != nil {
+				log.Printf("error writing to conn: %w", err)
+				return
+			}
 		}
 	case "srvr":
 		switch status {
 		case "dead":
 			return
 		default:
-			conn.Write([]byte(zkSrvrOut))
+			if _, err = conn.Write([]byte(zkSrvrOut)); err != nil {
+				log.Printf("error writing to conn: %w", err)
+				return
+			}
 		}
 	case "cons":
 		switch status {
 		case "dead":
 			return
 		default:
-			conn.Write([]byte(zkConsOut))
+			if _, err = conn.Write([]byte(zkConsOut)); err != nil {
+				log.Printf("error writing to conn: %w", err)
+				return
+			}
 		}
 	default:
-		conn.Write([]byte("This ZooKeeper instance is not currently serving requests."))
+		if _, err = conn.Write([]byte("This ZooKeeper instance is not currently serving requests.")); err != nil {
+			log.Printf("error writing to conn: %w", err)
+			return
+		}
 	}
 }

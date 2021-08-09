@@ -21,7 +21,11 @@ func TestAuthentication(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while initializing zk server: %v", err)
 	}
-	defer server.Shutdown()
+	defer func(server *integration.ZKServer) {
+		if err = server.Shutdown(); err != nil {
+			t.Fatalf("unexpected error while shutting down zk server: %v", err)
+		}
+	}(server)
 
 	// run ZK in separate goroutine
 	if err = server.Run(); err != nil {
@@ -45,7 +49,11 @@ func TestGetDataWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while initializing zk server: %v", err)
 	}
-	defer server.Shutdown()
+	defer func(server *integration.ZKServer) {
+		if err = server.Shutdown(); err != nil {
+			t.Fatalf("unexpected error while shutting down zk server: %v", err)
+		}
+	}(server)
 	if err = server.Run(); err != nil {
 		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
@@ -87,7 +95,11 @@ func TestGetChildrenDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error while initializing zk server: %v", err)
 	}
-	defer server.Shutdown()
+	defer func(server *integration.ZKServer) {
+		if err = server.Shutdown(); err != nil {
+			t.Fatalf("unexpected error while shutting down zk server: %v", err)
+		}
+	}(server)
 	if err = server.Run(); err != nil {
 		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
 		return
