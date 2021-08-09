@@ -323,7 +323,7 @@ func connHandler(conn net.Conn, status string) {
 			return
 		default:
 			if _, err = conn.Write([]byte("imok")); err != nil {
-				log.Printf("error writing to conn: %w", err)
+				log.Printf("error writing to conn: %v", err)
 				return
 			}
 		}
@@ -333,7 +333,7 @@ func connHandler(conn net.Conn, status string) {
 			return
 		default:
 			if _, err = conn.Write([]byte(zkSrvrOut)); err != nil {
-				log.Printf("error writing to conn: %w", err)
+				log.Printf("error writing to conn: %v", err)
 				return
 			}
 		}
@@ -343,7 +343,7 @@ func connHandler(conn net.Conn, status string) {
 			return
 		default:
 			if _, err = conn.Write([]byte(zkConsOut)); err != nil {
-				log.Printf("error writing to conn: %w", err)
+				log.Printf("error writing to conn: %v", err)
 				return
 			}
 		}
