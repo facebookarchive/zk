@@ -1,0 +1,5 @@
+linters:
+    golint:
+        min_confidence: 0.9
+fixers:
+    enable: true
