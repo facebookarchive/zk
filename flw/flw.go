@@ -120,7 +120,7 @@ func (c *Client) Ruok(server string) error {
 // Cons is a FourLetterWord helper function. In particular, this function
 // pulls the "cons" output from a server.
 // As with Srvr, the error value indicates whether the request had an issue.
-func (c *Client) Cons(server string) (*ServerClients, error) {
+func (c *Client) Cons(server string) ([]*ServerClient, error) {
 	const (
 		zrAddr = `^ /((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):(?:\d+))\[\d+\]`
 		zrPac  = `\(queued=(\d+),recved=(\d+),sent=(\d+),sid=(0x[A-Za-z0-9]+),lop=(\w+),est=(\d+),to=(\d+),`
@@ -190,7 +190,7 @@ func (c *Client) Cons(server string) (*ServerClients, error) {
 		})
 	}
 
-	return &ServerClients{Clients: clients}, nil
+	return clients, nil
 }
 
 // Srvr executes the srvr FLW protocol function using the default client.
@@ -206,7 +206,7 @@ func Ruok(server string) error {
 }
 
 // Cons executes the cons FLW protocol function using the default client.
-func Cons(server string) (*ServerClients, error) {
+func Cons(server string) ([]*ServerClient, error) {
 	defaultClient := &Client{Timeout: defaultTimeout}
 	return defaultClient.Cons(server)
 }

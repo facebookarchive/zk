@@ -9,14 +9,6 @@ type Client struct {
 	Timeout time.Duration
 }
 
-// ServerClients is a struct for the Cons() function. It's used to provide
-// the list of Clients.
-//
-// This is needed because Cons() takes multiple servers.
-type ServerClients struct {
-	Clients []*ServerClient
-}
-
 // ServerStats is the information pulled from the Zookeeper `stat` command.
 type ServerStats struct {
 	Sent        int64
@@ -52,5 +44,4 @@ type ServerClient struct {
 	LastResponse  time.Time
 	Addr          string
 	LastOperation string // maybe?
-	Error         error
 }

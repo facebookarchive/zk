@@ -201,12 +201,8 @@ func TestCons(t *testing.T) {
 		},
 	}
 
-	for i, v := range clients.Clients {
+	for i, v := range clients {
 		c := results[i]
-
-		if v.Error != nil {
-			t.Errorf("Unexpected client error: %v", err)
-		}
 
 		if v.Queued != c.Queued {
 			t.Errorf("Queued value mismatch (expected %d, got %d)", v.Queued, c.Queued)
