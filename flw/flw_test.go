@@ -349,7 +349,7 @@ func connHandler(conn net.Conn, status string) {
 		}
 	default:
 		if _, err = conn.Write([]byte("This ZooKeeper instance is not currently serving requests.")); err != nil {
-			log.Printf("error writing to conn: %w", err)
+			log.Printf("error writing to conn: %v", err)
 			return
 		}
 	}
