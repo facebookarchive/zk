@@ -59,8 +59,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		sessionCtx:     sessionCtx,
 	}
 
-	if client.DialTimeout != 0 {
-		c.sessionTimeout = client.DialTimeout
+	if client.SessionTimeout != 0 {
+		c.sessionTimeout = client.SessionTimeout
 	}
 	if err = c.authenticate(); err != nil {
 		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
