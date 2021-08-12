@@ -8,6 +8,7 @@ import (
 )
 
 const defaultMaxRetries = 5
+const defaultTimeout = 2 * time.Second
 
 // Client represents a Zookeeper client abstraction with additional configuration parameters.
 type Client struct {

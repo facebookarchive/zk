@@ -3,12 +3,8 @@ package zk
 import (
 	"bytes"
 	"fmt"
-	"time"
-
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
-
-const defaultTimeout = 2 * time.Second
 
 type pendingRequest struct {
 	reply jute.RecordReader
