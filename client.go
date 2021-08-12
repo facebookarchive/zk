@@ -19,6 +19,8 @@ type Client struct {
 	Network           string
 	EnsembleAddresses []string
 	MaxRetries        int
+
+	conn *Conn
 }
 
 // GetData uses the retryable client to call Get on a Zookeeper server.
