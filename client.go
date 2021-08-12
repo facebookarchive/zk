@@ -73,10 +73,6 @@ func (client *Client) Reset() error {
 
 // tryDial attempts to dial all of the servers in a Client's ensemble until a successful connection is established.
 func (client *Client) tryDial(ctx context.Context) (*Conn, error) {
-	if client.MaxRetries == 0 {
-		client.MaxRetries = defaultMaxRetries
-	}
-
 	var conn *Conn
 	var err error
 	for i := 0; i < client.MaxRetries; i++ {
@@ -99,6 +95,10 @@ func (client *Client) tryDial(ctx context.Context) (*Conn, error) {
 
 // getConn initializes client connection or reuses it if it has already been established.
 func (client *Client) getConn(ctx context.Context) error {
+	if client.MaxRetries == 0 {
+		client.MaxRetries = defaultMaxRetries
+	}
+
 	if client.conn == nil {
 		conn, err := client.tryDial(ctx)
 		if err != nil {
