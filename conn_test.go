@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"reflect"
 	"testing"
@@ -68,7 +67,8 @@ func TestGetDataWorks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
-	log.Printf("getData response: %+v", res)
+
+	t.Logf("getData response: %+v", res)
 }
 
 func TestGetDataNoTimeout(t *testing.T) {
