@@ -28,6 +28,7 @@ func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) 
 	if err := client.getConn(ctx); err != nil {
 		return nil, err
 	}
+	defer client.conn.Close()
 
 	var data []byte
 	var err error
@@ -50,6 +51,7 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 	if err := client.getConn(ctx); err != nil {
 		return nil, err
 	}
+	defer client.conn.Close()
 
 	var data []string
 	var err error
@@ -100,14 +102,12 @@ func (client *Client) getConn(ctx context.Context) error {
 		client.MaxRetries = defaultMaxRetries
 	}
 
-	if client.conn == nil {
-		conn, err := client.tryDial(ctx)
-		if err != nil {
-			return err
-		}
-
-		client.conn = conn
+	conn, err := client.tryDial(ctx)
+	if err != nil {
+		return err
 	}
+
+	client.conn = conn
 
 	return nil
 }
