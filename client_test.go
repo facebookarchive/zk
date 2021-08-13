@@ -3,53 +3,44 @@ package zk
 import (
 	"context"
 	"errors"
-	"net"
+	"fmt"
 	"reflect"
 	"testing"
 )
 
-// mockConnRPC is a mock implementation of the zkConn interface used for testing purposes.
-type mockConnRPC struct{}
+var testError = fmt.Errorf("error")
 
-func (r *mockConnRPC) isAlive() bool {
+// mockConnRPC is a mock implementation of the zkConn interface used for testing purposes.
+type mockConnRPC struct {
+	callCount              int
+	retriesUntilFunctional int
+}
+
+func (c *mockConnRPC) isAlive() bool {
 	return true
 }
 
-func (*mockConnRPC) GetData(path string) ([]byte, error) {
+func (c *mockConnRPC) GetData(path string) ([]byte, error) {
 	return []byte("mock"), nil
 }
 
-func (*mockConnRPC) GetChildren(path string) ([]string, error) {
-	return []string{"zookeeper"}, nil
+// GetChildren is a mock implementation which will return an error a given number of times to test the retry logic.
+func (c *mockConnRPC) GetChildren(path string) ([]string, error) {
+	c.callCount++
+	if c.callCount == c.retriesUntilFunctional {
+		return []string{"zookeeper"}, nil
+	}
+	return nil, testError
 }
 
-func (*mockConnRPC) Close() error {
+func (c *mockConnRPC) Close() error {
 	return nil
 }
 
-type mockNetConn struct {
-	net.Conn
-}
-
-func (m *mockNetConn) Read([]byte) (int, error) {
-	return 1, nil
-}
-
-func (m *mockNetConn) Write([]byte) (int, error) {
-	return 0, nil
-}
-
-func (m *mockNetConn) Close() error {
-	return nil
-}
-
-func TestClientGetChildren(t *testing.T) {
+func TestClientRetryLogic(t *testing.T) {
 	client := &Client{
 		Network: "tcp",
-		conn:    &mockConnRPC{},
-		Dialer: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return &mockNetConn{}, nil
-		},
+		conn:    &mockConnRPC{retriesUntilFunctional: defaultMaxRetries},
 	}
 
 	expected := []string{"zookeeper"}
@@ -63,17 +54,16 @@ func TestClientGetChildren(t *testing.T) {
 	}
 }
 
-func TestClientGetData(t *testing.T) {
+func TestClientRetryLogicFails(t *testing.T) {
 	client := &Client{
 		Network: "tcp",
-		conn:    &mockConnRPC{},
-		Dialer: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			return &mockNetConn{}, nil
-		},
+		conn:    &mockConnRPC{retriesUntilFunctional: defaultMaxRetries + 1},
 	}
 
-	if _, err := client.GetData(context.Background(), "/"); err != nil {
-		t.Fatalf("unexpected error calling GetData: %v", err)
+	expectedErr := fmt.Errorf("connection failed after %d retries: %w", defaultMaxRetries, testError)
+	_, err := client.GetChildren(context.Background(), "/")
+	if err == nil || err.Error() != expectedErr.Error() {
+		t.Fatalf("expected error: \"%v\", got error: \"%v\"", err, expectedErr)
 	}
 }
 
