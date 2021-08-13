@@ -33,12 +33,10 @@ type Conn struct {
 	sessionCtx    context.Context
 }
 
+// isAlive() checks the TCP connection is alive by reading a single byte from it.
 func (c *Conn) isAlive() bool {
 	one := make([]byte, 1)
-
-	c.conn.SetReadDeadline(time.Now())
 	_, err := c.conn.Read(one)
-	c.conn.SetReadDeadline(time.Time{})
 
 	return errors.Is(err, io.EOF)
 }

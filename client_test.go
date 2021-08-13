@@ -27,10 +27,6 @@ func (*mockConnRPC) Close() error {
 	return nil
 }
 
-func (r *mockConnRPC) authenticate() error {
-	return nil
-}
-
 type mockNetConn struct {
 	net.Conn
 }
