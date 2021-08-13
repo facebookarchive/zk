@@ -18,8 +18,7 @@ type Client struct {
 
 	MaxRetries int
 	Network    string
-	// Zookeeper connection string, comma separated host:port pairs, each corresponding to a zk server
-	Ensemble string
+	Ensemble   string
 
 	conn zkConn
 }
@@ -83,10 +82,6 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 	var conn *Conn
 	var err error
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	conn, err = client.DialContext(ctx, client.Network, client.Ensemble)
 	if err != nil {
 		return nil, err
