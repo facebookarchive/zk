@@ -64,6 +64,10 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 }
 
 func (client *Client) doRetry(ctx context.Context, fun func() error) error {
+	if client.MaxRetries == 0 {
+		client.MaxRetries = defaultMaxRetries
+	}
+
 	var err error
 	for i := 0; i < client.MaxRetries; i++ {
 		if ctx.Err() != nil {
@@ -104,10 +108,6 @@ func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 
 // getConn initializes client connection or reuses it if it has already been established.
 func (client *Client) getConn(ctx context.Context) error {
-	if client.MaxRetries == 0 {
-		client.MaxRetries = defaultMaxRetries
-	}
-
 	if client.conn == nil || !client.conn.isAlive() {
 		conn, err := client.tryDial(ctx)
 		if err != nil {
