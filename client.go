@@ -78,22 +78,10 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 	return err
 }
 
-// tryDial attempts to dial a Client's ensemble until a successful connection is established.
-func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
-	var conn *Conn
-	var err error
-	conn, err = client.DialContext(ctx, client.Network, client.Ensemble)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
-}
-
 // getConn initializes client connection or reuses it if it has already been established.
 func (client *Client) getConn(ctx context.Context) error {
 	if client.conn == nil || !client.conn.isAlive() {
-		conn, err := client.tryDial(ctx)
+		conn, err := client.DialContext(ctx, client.Network, client.Ensemble)
 		if err != nil {
 			return err
 		}
