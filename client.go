@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -16,9 +17,10 @@ type Client struct {
 	Dialer         func(ctx context.Context, network, addr string) (net.Conn, error)
 	SessionTimeout time.Duration
 
-	Network           string
-	EnsembleAddresses []string
-	MaxRetries        int
+	MaxRetries int
+	Network    string
+	// Zookeeper connection string, comma separated host:port pairs, each corresponding to a zk server
+	Ensemble string
 
 	conn zkConn
 }
@@ -82,21 +84,16 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 	var conn *Conn
 	var err error
-	shuffleSlice(client.EnsembleAddresses)
-	for _, address := range client.EnsembleAddresses {
-		if ctx.Err() != nil {
-			return nil, ctx.Err() // canceled, don't retry
-		}
-
-		conn, err = client.DialContext(ctx, client.Network, address)
-		if err != nil {
-			continue // try dialing the next address in the ensemble
-		}
-
-		return conn, nil
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 
-	return nil, fmt.Errorf("could not dial any servers in ensemble: %w", err)
+	conn, err = client.DialContext(ctx, client.Network, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
 
 // getConn initializes client connection or reuses it if it has already been established.
@@ -111,4 +108,21 @@ func (client *Client) getConn(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// dialEnsemble dials each server from the ensemble connection string. It returns the connection of the first
+// server it manages to connect to, or an error if it fails to connect to all of the servers in the Ensemble string.
+func (client *Client) dialEnsemble(ctx context.Context) (net.Conn, error) {
+	addresses := strings.Split(client.Ensemble, ",")
+	shuffleSlice(addresses)
+
+	for _, address := range addresses {
+		conn, err := client.Dialer(ctx, client.Network, address)
+		if err != nil {
+			continue
+		}
+		return conn, nil
+	}
+
+	return nil, fmt.Errorf("could not dial any servers in ensemble")
 }

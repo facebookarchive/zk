@@ -56,9 +56,18 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		client.Dialer = defaultDialer.DialContext
 	}
 
-	conn, err := client.Dialer(ctx, network, address)
-	if err != nil {
-		return nil, fmt.Errorf("error dialing ZK server: %v", err)
+	var conn net.Conn
+	var err error
+	if client.Ensemble != "" {
+		conn, err = client.dialEnsemble(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error dialing ZK server: %v", err)
+		}
+	} else {
+		conn, err = client.Dialer(ctx, network, address)
+		if err != nil {
+			return nil, fmt.Errorf("error dialing ZK server: %v", err)
+		}
 	}
 
 	sessionCtx, cancel := context.WithCancel(context.Background())

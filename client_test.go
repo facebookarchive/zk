@@ -69,8 +69,7 @@ func TestClientRetryLogicFails(t *testing.T) {
 
 func TestClientContextCanceled(t *testing.T) {
 	client := &Client{
-		Network:           "tcp",
-		EnsembleAddresses: []string{"127.0.0.1:2181"},
+		Network: "tcp",
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
