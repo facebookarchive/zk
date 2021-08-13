@@ -3,6 +3,9 @@ package zk
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
+	"time"
+
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
@@ -43,4 +46,9 @@ func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 	}
 
 	return sendBuf.Bytes(), nil
+}
+
+func shuffleSlice(a []string) {
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(a), func(i, j int) { a[i], a[j] = a[j], a[i] })
 }

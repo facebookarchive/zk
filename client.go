@@ -83,6 +83,7 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 	var conn *Conn
 	var err error
+	shuffleSlice(client.EnsembleAddresses)
 	for i := 0; i < client.MaxRetries; i++ {
 		for _, address := range client.EnsembleAddresses {
 			if ctx.Err() != nil {
