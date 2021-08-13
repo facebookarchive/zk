@@ -6,29 +6,54 @@ import (
 	"net"
 	"reflect"
 	"testing"
-
-	"github.com/facebookincubator/zk/integration"
 )
 
+// mockConnRPC is a mock implementation of the zkConn interface used for testing purposes.
+type mockConnRPC struct{}
+
+func (r *mockConnRPC) isAlive() bool {
+	return true
+}
+
+func (*mockConnRPC) GetData(path string) ([]byte, error) {
+	return []byte("mock"), nil
+}
+
+func (*mockConnRPC) GetChildren(path string) ([]string, error) {
+	return []string{"zookeeper"}, nil
+}
+
+func (*mockConnRPC) Close() error {
+	return nil
+}
+
+func (r *mockConnRPC) authenticate() error {
+	return nil
+}
+
+type mockNetConn struct {
+	net.Conn
+}
+
+func (m *mockNetConn) Read([]byte) (int, error) {
+	return 1, nil
+}
+
+func (m *mockNetConn) Write([]byte) (int, error) {
+	return 0, nil
+}
+
+func (m *mockNetConn) Close() error {
+	return nil
+}
+
 func TestClientGetChildren(t *testing.T) {
-	server, err := integration.NewZKServer("3.6.2", integration.DefaultConfig())
-	if err != nil {
-		t.Fatalf("unexpected error while initializing zk server: %v", err)
-	}
-	defer func(server *integration.ZKServer) {
-		if err = server.Shutdown(); err != nil {
-			t.Fatalf("unexpected error while shutting down zk server: %v", err)
-		}
-	}(server)
-
-	if err = server.Run(); err != nil {
-		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
-		return
-	}
-
 	client := &Client{
-		Network:           "tcp",
-		EnsembleAddresses: []string{"127.0.0.1:2180", "127.0.0.1:2181"},
+		Network: "tcp",
+		conn:    &mockConnRPC{},
+		Dialer: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return &mockNetConn{}, nil
+		},
 	}
 
 	expected := []string{"zookeeper"}
@@ -43,40 +68,23 @@ func TestClientGetChildren(t *testing.T) {
 }
 
 func TestClientGetData(t *testing.T) {
-	server, err := integration.NewZKServer("3.6.2", integration.DefaultConfig())
-	if err != nil {
-		t.Fatalf("unexpected error while initializing zk server: %v", err)
-	}
-	defer func(server *integration.ZKServer) {
-		if err = server.Shutdown(); err != nil {
-			t.Fatalf("unexpected error while shutting down zk server: %v", err)
-		}
-	}(server)
-
-	if err = server.Run(); err != nil {
-		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
-		return
-	}
-
 	client := &Client{
-		Network:           "tcp",
-		EnsembleAddresses: []string{"127.0.0.1:2180", "127.0.0.1:2181"}, // add a nonexistent first address
+		Network: "tcp",
+		conn:    &mockConnRPC{},
+		Dialer: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return &mockNetConn{}, nil
+		},
 	}
 
-	if _, err = client.GetData(context.Background(), "/"); err != nil {
+	if _, err := client.GetData(context.Background(), "/"); err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
 }
 
 func TestClientContextCanceled(t *testing.T) {
-	sessionCtx, cancelSession := context.WithCancel(context.Background())
-	c, _ := net.Pipe()
-
-	conn := &Conn{conn: c, sessionCtx: sessionCtx, cancelSession: cancelSession}
 	client := &Client{
 		Network:           "tcp",
 		EnsembleAddresses: []string{"127.0.0.1:2181"},
-		conn:              conn,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

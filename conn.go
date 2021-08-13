@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net"
@@ -30,6 +31,16 @@ type Conn struct {
 	reqs          sync.Map
 	cancelSession context.CancelFunc
 	sessionCtx    context.Context
+}
+
+func (c *Conn) isAlive() bool {
+	one := make([]byte, 1)
+
+	c.conn.SetReadDeadline(time.Now())
+	_, err := c.conn.Read(one)
+	c.conn.SetReadDeadline(time.Time{})
+
+	return errors.Is(err, io.EOF)
 }
 
 // DialContext connects to the ZK server using the default client.
@@ -108,8 +119,9 @@ func (c *Conn) authenticate() error {
 		return fmt.Errorf("could not decode response struct: %v", err)
 	}
 
-	c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
-
+	if response.TimeOut > 0 {
+		c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
+	}
 	// set the ping interval to half of the session timeout, according to Zookeeper documentation
 	c.pingInterval = c.sessionTimeout / 2
 

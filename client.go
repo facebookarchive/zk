@@ -20,20 +20,20 @@ type Client struct {
 	EnsembleAddresses []string
 	MaxRetries        int
 
-	conn *Conn
+	conn zkConn
 }
 
 // GetData uses the retryable client to call Get on a Zookeeper server.
 func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) {
-	conn, err := client.getConn(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
+	var err error
 	var data []byte
 	err = client.doRetry(ctx, func() error {
-		data, err = conn.GetData(path)
+		if err = client.getConn(ctx); err != nil {
+			return err
+		}
+		defer client.conn.Close()
+
+		data, err = client.conn.GetData(path)
 		return err
 	})
 	if err != nil {
@@ -45,15 +45,15 @@ func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) 
 
 // GetChildren uses the retryable client to call GetChildren on a Zookeeper server.
 func (client *Client) GetChildren(ctx context.Context, path string) ([]string, error) {
-	conn, err := client.getConn(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
 	var children []string
+	var err error
 	err = client.doRetry(ctx, func() error {
-		children, err = conn.GetChildren(path)
+		if err = client.getConn(ctx); err != nil {
+			return err
+		}
+		defer client.conn.Close()
+
+		children, err = client.conn.GetChildren(path)
 		return err
 	})
 	if err != nil {
@@ -81,7 +81,7 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 }
 
 // tryDial attempts to dial all of the servers in a Client's ensemble until a successful connection is established.
-func (client *Client) tryDial(ctx context.Context) (*Conn, error) {
+func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 	var conn *Conn
 	var err error
 	for i := 0; i < client.MaxRetries; i++ {
@@ -103,15 +103,19 @@ func (client *Client) tryDial(ctx context.Context) (*Conn, error) {
 }
 
 // getConn initializes client connection or reuses it if it has already been established.
-func (client *Client) getConn(ctx context.Context) (*Conn, error) {
+func (client *Client) getConn(ctx context.Context) error {
 	if client.MaxRetries == 0 {
 		client.MaxRetries = defaultMaxRetries
 	}
 
-	conn, err := client.tryDial(ctx)
-	if err != nil {
-		return nil, err
+	if client.conn == nil || !client.conn.isAlive() {
+		conn, err := client.tryDial(ctx)
+		if err != nil {
+			return err
+		}
+
+		client.conn = conn
 	}
 
-	return conn, nil
+	return nil
 }
