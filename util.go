@@ -21,6 +21,10 @@ type pendingRequest struct {
 	done  chan struct{}
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 // serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
 // while also prepending the total length of the structures to the beginning of the array.
 func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
@@ -49,6 +53,5 @@ func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 }
 
 func shuffleSlice(a []string) {
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(a), func(i, j int) { a[i], a[j] = a[j], a[i] })
 }
