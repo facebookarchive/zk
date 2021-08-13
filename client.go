@@ -28,11 +28,6 @@ func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) 
 	var err error
 	var data []byte
 	err = client.doRetry(ctx, func() error {
-		if err = client.getConn(ctx); err != nil {
-			return err
-		}
-		defer client.conn.Close()
-
 		data, err = client.conn.GetData(path)
 		return err
 	})
@@ -48,11 +43,6 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 	var children []string
 	var err error
 	err = client.doRetry(ctx, func() error {
-		if err = client.getConn(ctx); err != nil {
-			return err
-		}
-		defer client.conn.Close()
-
 		children, err = client.conn.GetChildren(path)
 		return err
 	})
@@ -73,6 +63,11 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 		if ctx.Err() != nil {
 			return ctx.Err() // ctx canceled, don't retry
 		}
+		if err = client.getConn(ctx); err != nil {
+			continue
+		}
+		defer client.conn.Close()
+
 		err = fun()
 		if err != nil {
 			continue // retry
