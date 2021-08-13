@@ -2,21 +2,15 @@ package zk
 
 import (
 	"bytes"
-	"context"
 	"fmt"
-	"net"
-	"time"
-
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
-const defaultTimeout = 2 * time.Second
-
-// Client represents a Zookeeper client abstraction with additional configuration parameters.
-type Client struct {
-	// Dialer is a function to be used to establish a connection to a single host.
-	Dialer      func(ctx context.Context, network, addr string) (net.Conn, error)
-	DialTimeout time.Duration
+type zkConn interface {
+	GetData(path string) ([]byte, error)
+	GetChildren(path string) ([]string, error)
+	Close() error
+	isAlive() bool
 }
 
 type pendingRequest struct {

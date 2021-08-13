@@ -32,6 +32,16 @@ type Conn struct {
 	sessionCtx    context.Context
 }
 
+// isAlive() checks the TCP connection is alive by reading from the sessionCtx channel.
+func (c *Conn) isAlive() bool {
+	select {
+	case <-c.sessionCtx.Done():
+		return false
+	default:
+		return true
+	}
+}
+
 // DialContext connects to the ZK server using the default client.
 func DialContext(ctx context.Context, network, address string) (*Conn, error) {
 	defaultClient := Client{}
@@ -59,8 +69,8 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		sessionCtx:     sessionCtx,
 	}
 
-	if client.DialTimeout != 0 {
-		c.sessionTimeout = client.DialTimeout
+	if client.SessionTimeout != 0 {
+		c.sessionTimeout = client.SessionTimeout
 	}
 	if err = c.authenticate(); err != nil {
 		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
@@ -108,8 +118,9 @@ func (c *Conn) authenticate() error {
 		return fmt.Errorf("could not decode response struct: %v", err)
 	}
 
-	c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
-
+	if response.TimeOut > 0 {
+		c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
+	}
 	// set the ping interval to half of the session timeout, according to Zookeeper documentation
 	c.pingInterval = c.sessionTimeout / 2
 
