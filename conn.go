@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net"
@@ -33,12 +32,14 @@ type Conn struct {
 	sessionCtx    context.Context
 }
 
-// isAlive() checks the TCP connection is alive by reading a single byte from it.
+// isAlive() checks the TCP connection is alive by reading from the sessionCtx channel.
 func (c *Conn) isAlive() bool {
-	one := make([]byte, 1)
-	_, err := c.conn.Read(one)
-
-	return errors.Is(err, io.EOF)
+	select {
+	case <-c.sessionCtx.Done():
+		return false
+	default:
+		return true
+	}
 }
 
 // DialContext connects to the ZK server using the default client.
