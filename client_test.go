@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+const defaultMaxRetries = 5
+
 var testError = fmt.Errorf("error")
 
 // mockConnRPC is a mock implementation of the zkConn interface used for testing purposes.
@@ -26,10 +28,11 @@ func (c *mockConnRPC) GetData(path string) ([]byte, error) {
 
 // GetChildren is a mock implementation which will return an error a given number of times to test the retry logic.
 func (c *mockConnRPC) GetChildren(path string) ([]string, error) {
-	c.callCount++
 	if c.callCount == c.retriesUntilFunctional {
 		return []string{"zookeeper"}, nil
 	}
+	c.callCount++
+
 	return nil, testError
 }
 
@@ -39,8 +42,9 @@ func (c *mockConnRPC) Close() error {
 
 func TestClientRetryLogic(t *testing.T) {
 	client := &Client{
-		Network: "tcp",
-		conn:    &mockConnRPC{retriesUntilFunctional: defaultMaxRetries},
+		MaxRetries: defaultMaxRetries,
+		Network:    "tcp",
+		conn:       &mockConnRPC{retriesUntilFunctional: defaultMaxRetries},
 	}
 
 	expected := []string{"zookeeper"}
@@ -56,8 +60,9 @@ func TestClientRetryLogic(t *testing.T) {
 
 func TestClientRetryLogicFails(t *testing.T) {
 	client := &Client{
-		Network: "tcp",
-		conn:    &mockConnRPC{retriesUntilFunctional: defaultMaxRetries + 1},
+		MaxRetries: defaultMaxRetries,
+		Network:    "tcp",
+		conn:       &mockConnRPC{retriesUntilFunctional: defaultMaxRetries + 1},
 	}
 
 	expectedErr := fmt.Errorf("connection failed after %d retries: %w", defaultMaxRetries, testError)
@@ -69,7 +74,8 @@ func TestClientRetryLogicFails(t *testing.T) {
 
 func TestClientContextCanceled(t *testing.T) {
 	client := &Client{
-		Network: "tcp",
+		MaxRetries: defaultMaxRetries,
+		Network:    "tcp",
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

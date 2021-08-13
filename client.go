@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-const defaultMaxRetries = 5
 const defaultTimeout = 2 * time.Second
 
 // Client represents a Zookeeper client abstraction with additional configuration parameters.
@@ -53,13 +52,11 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 	return children, nil
 }
 
+// doRetry makes attempts at connection and RPC execution according to the MaxRetries parameter.
+// If the MaxRetries value is not set, the RPC is executed only once.
 func (client *Client) doRetry(ctx context.Context, fun func() error) error {
-	if client.MaxRetries == 0 {
-		client.MaxRetries = defaultMaxRetries
-	}
-
 	var err error
-	for i := 0; i < client.MaxRetries; i++ {
+	for i := 0; i <= client.MaxRetries; i++ {
 		if ctx.Err() != nil {
 			return ctx.Err() // ctx canceled, don't retry
 		}
