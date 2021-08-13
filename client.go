@@ -84,22 +84,20 @@ func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 	var conn *Conn
 	var err error
 	shuffleSlice(client.EnsembleAddresses)
-	for i := 0; i < client.MaxRetries; i++ {
-		for _, address := range client.EnsembleAddresses {
-			if ctx.Err() != nil {
-				return nil, ctx.Err() // canceled, don't retry
-			}
-
-			conn, err = client.DialContext(ctx, client.Network, address)
-			if err != nil {
-				continue // try dialing the next address in the ensemble
-			}
-
-			return conn, nil
+	for _, address := range client.EnsembleAddresses {
+		if ctx.Err() != nil {
+			return nil, ctx.Err() // canceled, don't retry
 		}
+
+		conn, err = client.DialContext(ctx, client.Network, address)
+		if err != nil {
+			continue // try dialing the next address in the ensemble
+		}
+
+		return conn, nil
 	}
 
-	return nil, fmt.Errorf("could not dial ensemble after %d retries: %w", client.MaxRetries, err)
+	return nil, fmt.Errorf("could not dial any servers in ensemble: %w", err)
 }
 
 // getConn initializes client connection or reuses it if it has already been established.
