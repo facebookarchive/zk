@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 )
 
@@ -80,7 +79,7 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 	return err
 }
 
-// tryDial attempts to dial all of the servers in a Client's ensemble until a successful connection is established.
+// tryDial attempts to dial a Client's ensemble until a successful connection is established.
 func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 	var conn *Conn
 	var err error
@@ -88,7 +87,7 @@ func (client *Client) tryDial(ctx context.Context) (zkConn, error) {
 		return nil, ctx.Err()
 	}
 
-	conn, err = client.DialContext(ctx, client.Network, "")
+	conn, err = client.DialContext(ctx, client.Network, client.Ensemble)
 	if err != nil {
 		return nil, err
 	}
@@ -108,21 +107,4 @@ func (client *Client) getConn(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// dialEnsemble dials each server from the ensemble connection string. It returns the connection of the first
-// server it manages to connect to, or an error if it fails to connect to all of the servers in the Ensemble string.
-func (client *Client) dialEnsemble(ctx context.Context) (net.Conn, error) {
-	addresses := strings.Split(client.Ensemble, ",")
-	shuffleSlice(addresses)
-
-	for _, address := range addresses {
-		conn, err := client.Dialer(ctx, client.Network, address)
-		if err != nil {
-			continue
-		}
-		return conn, nil
-	}
-
-	return nil, fmt.Errorf("could not dial any servers in ensemble")
 }

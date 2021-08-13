@@ -3,9 +3,6 @@ package zk
 import (
 	"bytes"
 	"fmt"
-	"math/rand"
-	"time"
-
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
@@ -19,10 +16,6 @@ type zkConn interface {
 type pendingRequest struct {
 	reply jute.RecordReader
 	done  chan struct{}
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
 }
 
 // serializeWriters takes in one or more RecordWriter instances, and serializes them to a byte array
@@ -50,8 +43,4 @@ func serializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 	}
 
 	return sendBuf.Bytes(), nil
-}
-
-func shuffleSlice(a []string) {
-	rand.Shuffle(len(a), func(i, j int) { a[i], a[j] = a[j], a[i] })
 }
