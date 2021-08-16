@@ -1,11 +1,15 @@
 package zk
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"github.com/facebookincubator/zk/internal/proto"
+	"github.com/go-zookeeper/jute/lib/go/jute"
 	"io"
 	"net"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -120,4 +124,139 @@ func TestGetChildrenDefault(t *testing.T) {
 	if !reflect.DeepEqual(expected, res) {
 		t.Fatalf("getChildren error: expected %v, got %v", expected, res)
 	}
+}
+
+func TestGetDataSimple(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping in-memory tests for CI")
+	}
+
+	listener := NewListener()
+	defer listener.Close()
+
+	go func() {
+		if err := listener.handler(&proto.ConnectRequest{}, &proto.ConnectResponse{}); err != nil {
+			t.Errorf("unexpected handler error: %v", err)
+			return
+		}
+	}()
+
+	client := Client{Dialer: listener.DialContext}
+	conn, err := client.DialContext(context.Background(), "", "")
+	if err != nil {
+		t.Fatalf("unexpected error dialing server: %v", err)
+	}
+	defer conn.Close()
+
+	expected := []byte("test")
+	go func() {
+		if err = listener.handler(&proto.GetDataRequest{}, &proto.GetDataResponse{Data: expected}); err != nil {
+			t.Errorf("unexpected handler error: %v", err)
+			return
+		}
+	}()
+
+	res, err := conn.GetData("/")
+	if err != nil {
+		t.Fatalf("unexpected error calling GetData: %v", err)
+	}
+	if !bytes.Equal(expected, res) {
+		t.Fatalf("expected %v got %v", expected, res)
+	}
+}
+
+func NewListener() *inMemoryListener {
+	return &inMemoryListener{
+		connections: make(chan net.Conn),
+		closed:      make(chan struct{}),
+	}
+}
+
+type inMemoryListener struct {
+	server      net.Conn
+	connections chan net.Conn
+
+	closeLock sync.Mutex
+	closed    chan struct{}
+}
+
+func (l *inMemoryListener) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	select {
+	case <-l.closed:
+		return nil, net.ErrClosed
+	default:
+	}
+
+	server, client := net.Pipe()
+	l.connections <- server
+
+	return client, nil
+}
+
+// Accept blocks until a client connects or an error occurs
+func (l *inMemoryListener) Accept() (net.Conn, error) {
+	select {
+	case newConn := <-l.connections:
+		return newConn, nil
+	case <-l.closed:
+		return nil, net.ErrClosed
+	}
+}
+
+// Close closes the in-memory listener.
+func (l *inMemoryListener) Close() error {
+	l.closeLock.Lock()
+	defer l.closeLock.Unlock()
+
+	close(l.closed)
+
+	return nil
+}
+
+// Addr returns empty IP address for the in-memory listener.
+func (l *inMemoryListener) Addr() net.Addr {
+	return &net.IPAddr{}
+}
+
+func (l *inMemoryListener) handler(req jute.RecordReader, resp jute.RecordWriter) error {
+	if l.server == nil {
+		return l.onInit(req, resp)
+	}
+
+	dec := jute.NewBinaryDecoder(l.server)
+	dec.ReadInt()
+	header := &proto.RequestHeader{}
+	if err := dec.ReadRecord(header); err != nil {
+		return err
+	}
+	if err := dec.ReadRecord(req); err != nil {
+		return err
+	}
+
+	return l.serializeAndSend(&proto.ReplyHeader{Xid: header.Xid}, resp)
+}
+
+func (l *inMemoryListener) onInit(req jute.RecordReader, resp jute.RecordWriter) error {
+	server, err := l.Accept()
+	if err != nil {
+		return err
+	}
+	l.server = server
+
+	if err = jute.NewBinaryDecoder(l.server).ReadRecord(req); err != nil {
+		return err
+	}
+
+	return l.serializeAndSend(resp)
+}
+
+func (l *inMemoryListener) serializeAndSend(resp ...jute.RecordWriter) error {
+	sendBuf, err := serializeWriters(resp...)
+	if err != nil {
+		return err
+	}
+	if _, err = l.server.Write(sendBuf); err != nil {
+		return err
+	}
+	return nil
 }
