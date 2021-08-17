@@ -9,6 +9,7 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
+// DefaultListenAddress is the default address on which the test server listens.
 const DefaultListenAddress = "127.0.0.1:62000"
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
@@ -17,6 +18,7 @@ type TestServer struct {
 	conn     net.Conn
 }
 
+// NewServer creates a new TestServer instance with a default local listener.
 func NewServer() *TestServer {
 	return &TestServer{
 		listener: newLocalListener(),
@@ -70,6 +72,7 @@ func (l *TestServer) serializeAndSend(resp ...jute.RecordWriter) error {
 	return nil
 }
 
+// Close closes the test server's listener.
 func (l *TestServer) Close() error {
 	return l.listener.Close()
 }
