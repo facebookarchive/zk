@@ -129,19 +129,18 @@ func TestGetDataSimple(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in-memory tests for CI")
 	}
-
-	listener := testutils.NewListener()
-	defer listener.Close()
+	server := testutils.NewServer()
+	defer server.Close()
 
 	go func() {
-		if err := listener.Handler(&proto.ConnectRequest{}, &proto.ConnectResponse{}); err != nil {
+		if err := server.Handler(&proto.ConnectRequest{}, &proto.ConnectResponse{}); err != nil {
 			t.Errorf("unexpected handler error: %v", err)
 			return
 		}
 	}()
 
-	client := Client{Dialer: listener.DialContext}
-	conn, err := client.DialContext(context.Background(), "", "")
+	client := Client{}
+	conn, err := client.DialContext(context.Background(), "tcp", testutils.DefaultListenAddress)
 	if err != nil {
 		t.Fatalf("unexpected error dialing server: %v", err)
 	}
@@ -149,7 +148,7 @@ func TestGetDataSimple(t *testing.T) {
 
 	expected := []byte("test")
 	go func() {
-		if err = listener.Handler(&proto.GetDataRequest{}, &proto.GetDataResponse{Data: expected}); err != nil {
+		if err = server.Handler(&proto.GetDataRequest{}, &proto.GetDataResponse{Data: expected}); err != nil {
 			t.Errorf("unexpected handler error: %v", err)
 			return
 		}

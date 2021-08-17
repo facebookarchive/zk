@@ -3,6 +3,7 @@ package io
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
