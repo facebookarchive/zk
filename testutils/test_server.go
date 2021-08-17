@@ -10,7 +10,7 @@ import (
 )
 
 // DefaultListenAddress is the default address on which the test server listens.
-const DefaultListenAddress = "127.0.0.1:62000"
+const DefaultListenAddress = "127.0.0.1:"
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -45,6 +45,10 @@ func (l *TestServer) Handler(req jute.RecordReader, resp jute.RecordWriter) erro
 	}
 
 	return l.serializeAndSend(&proto.ReplyHeader{Xid: header.Xid}, resp)
+}
+
+func (l *TestServer) Addr() net.Addr {
+	return l.listener.Addr()
 }
 
 // Close closes the test server's listener.

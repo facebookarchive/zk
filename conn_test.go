@@ -140,7 +140,7 @@ func TestGetDataSimple(t *testing.T) {
 	}()
 
 	client := Client{}
-	conn, err := client.DialContext(context.Background(), "tcp", testutils.DefaultListenAddress)
+	conn, err := client.DialContext(context.Background(), server.Addr().Network(), server.Addr().String())
 	if err != nil {
 		t.Fatalf("unexpected error dialing server: %v", err)
 	}
