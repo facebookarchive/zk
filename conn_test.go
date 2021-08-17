@@ -127,7 +127,7 @@ func TestGetChildrenDefault(t *testing.T) {
 
 func TestGetDataSimple(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping in-memory tests for CI")
+		t.Skip("skipping local ZK mock tests for CI")
 	}
 	server, err := testutils.NewServer()
 	if err != nil {
