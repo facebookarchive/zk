@@ -132,7 +132,12 @@ func TestGetDataSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
-	go server.Start()
+	go func() {
+		if err := server.Start(); err != nil {
+			t.Errorf("error starting test server: %v", err)
+			return
+		}
+	}()
 	defer server.Close()
 
 	client := Client{}
