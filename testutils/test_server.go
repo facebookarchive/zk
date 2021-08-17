@@ -8,10 +8,8 @@ import (
 	"github.com/facebookincubator/zk/io"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
+	"golang.org/x/net/nettest"
 )
-
-// DefaultListenAddress is the default address on which the test server listens.
-const DefaultListenAddress = "127.0.0.1:"
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -20,10 +18,13 @@ type TestServer struct {
 }
 
 // NewServer creates a new TestServer instance with a default local listener.
-func NewServer() *TestServer {
-	return &TestServer{
-		listener: newLocalListener(),
+func NewServer() (*TestServer, error) {
+	l, err := newLocalListener()
+	if err != nil {
+		return nil, err
 	}
+
+	return &TestServer{listener: l}, nil
 }
 
 // Handler receives a request header and body from the client connection,
@@ -82,13 +83,11 @@ func (l *TestServer) serializeAndSend(resp ...jute.RecordWriter) error {
 	return nil
 }
 
-func newLocalListener() net.Listener {
-	l, err := net.Listen("tcp", DefaultListenAddress)
+func newLocalListener() (net.Listener, error) {
+	listener, err := nettest.NewLocalListener("tcp")
 	if err != nil {
-		if l, err = net.Listen("tcp6", "[::1]:0"); err != nil {
-			panic(fmt.Sprintf("failed to listen on a port: %v", err))
-		}
+		return nil, fmt.Errorf("failed to listen on a port: %v", err)
 	}
 
-	return l
+	return listener, nil
 }
