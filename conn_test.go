@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/facebookincubator/zk/internal/proto"
-	"github.com/go-zookeeper/jute/lib/go/jute"
 	"io"
 	"net"
 	"reflect"
@@ -14,6 +12,9 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/integration"
+	"github.com/facebookincubator/zk/internal/proto"
+
+	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
 func TestAuthentication(t *testing.T) {
@@ -224,7 +225,9 @@ func (l *inMemoryListener) handler(req jute.RecordReader, resp jute.RecordWriter
 	}
 
 	dec := jute.NewBinaryDecoder(l.server)
-	dec.ReadInt()
+	if _, err := dec.ReadInt(); err != nil {
+		return err
+	}
 	header := &proto.RequestHeader{}
 	if err := dec.ReadRecord(header); err != nil {
 		return err
