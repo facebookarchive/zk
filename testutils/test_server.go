@@ -61,7 +61,11 @@ func (s *TestServer) handler() {
 			continue
 		}
 
-		go handleConn(conn)
+		go func() {
+			if err := handleConn(conn); err != nil {
+				return
+			}
+		}()
 	}
 }
 
