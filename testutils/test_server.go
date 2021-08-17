@@ -6,6 +6,7 @@ import (
 
 	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/io"
+
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
