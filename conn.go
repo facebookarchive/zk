@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/internal/proto"
+	"github.com/facebookincubator/zk/io"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -96,7 +97,7 @@ func (c *Conn) authenticate() error {
 		TimeOut: int32(c.sessionTimeout.Milliseconds()),
 	}
 
-	sendBuf, err := serializeWriters(request)
+	sendBuf, err := io.SerializeWriters(request)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
@@ -157,7 +158,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 		Type: opcode,
 	}
 
-	sendBuf, err := serializeWriters(header, w)
+	sendBuf, err := io.SerializeWriters(header, w)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
@@ -234,7 +235,7 @@ func (c *Conn) keepAlive() {
 				Xid:  pingXID,
 				Type: opPing,
 			}
-			sendBuf, err := serializeWriters(header)
+			sendBuf, err := io.SerializeWriters(header)
 			if err != nil {
 				log.Printf("error serializing ping request: %v", err)
 				continue
