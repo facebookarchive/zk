@@ -6,6 +6,7 @@ import (
 
 	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/io"
+	"github.com/facebookincubator/zk/opcodes"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -16,7 +17,6 @@ const defaultListenAddress = "127.0.0.1:"
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
 	listener net.Listener
-	conn     net.Conn
 }
 
 // NewServer creates a new TestServer instance with a default local listener.
@@ -29,60 +29,20 @@ func NewServer() (*TestServer, error) {
 	return &TestServer{listener: l}, nil
 }
 
-// Handler receives a request header and body from the client connection,
-// and returns the response along with a reply header.
-func (l *TestServer) Handler(req jute.RecordReader, resp jute.RecordWriter) error {
-	if l.conn == nil {
-		return l.onInit(req, resp)
-	}
-
-	dec := jute.NewBinaryDecoder(l.conn)
-	if _, err := dec.ReadInt(); err != nil {
-		return err
-	}
-	header := &proto.RequestHeader{}
-	if err := dec.ReadRecord(header); err != nil {
-		return err
-	}
-	if err := dec.ReadRecord(req); err != nil {
-		return err
-	}
-
-	return l.serializeAndSend(&proto.ReplyHeader{Xid: header.Xid}, resp)
-}
-
-func (l *TestServer) Addr() net.Addr {
-	return l.listener.Addr()
+// Addr returns the addres on which this test server is listening on.
+func (s *TestServer) Addr() net.Addr {
+	return s.listener.Addr()
 }
 
 // Close closes the test server's listener.
-func (l *TestServer) Close() error {
-	return l.listener.Close()
+func (s *TestServer) Close() error {
+	return s.listener.Close()
 }
 
-func (l *TestServer) onInit(req jute.RecordReader, resp jute.RecordWriter) error {
-	conn, err := l.listener.Accept()
-	if err != nil {
-		return err
-	}
-	l.conn = conn
-
-	if err = jute.NewBinaryDecoder(l.conn).ReadRecord(req); err != nil {
-		return err
-	}
-
-	return l.serializeAndSend(resp)
-}
-
-func (l *TestServer) serializeAndSend(resp ...jute.RecordWriter) error {
-	sendBuf, err := io.SerializeWriters(resp...)
-	if err != nil {
-		return err
-	}
-	if _, err = l.conn.Write(sendBuf); err != nil {
-		return err
-	}
-	return nil
+// Start starts the test server and its handler.
+// Calls to this method are blocking so calling in a separate goroutine is recommended.
+func (s *TestServer) Start() error {
+	return s.handler()
 }
 
 func newLocalListener() (net.Listener, error) {
@@ -92,4 +52,59 @@ func newLocalListener() (net.Listener, error) {
 	}
 
 	return listener, nil
+}
+
+func (s *TestServer) handler() error {
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			return err
+		}
+
+		go handleConn(conn)
+	}
+}
+
+func handleConn(conn net.Conn) error {
+	if err := jute.NewBinaryDecoder(conn).ReadRecord(&proto.ConnectRequest{}); err != nil {
+		return err
+	}
+
+	if err := serializeAndSend(conn, &proto.ConnectResponse{}); err != nil {
+		return err
+	}
+
+	dec := jute.NewBinaryDecoder(conn)
+	for {
+		if _, err := dec.ReadInt(); err != nil {
+			continue
+		}
+
+		header := &proto.RequestHeader{}
+		if err := dec.ReadRecord(header); err != nil {
+			return err
+		}
+		switch header.Type {
+		case opcodes.OpGetData:
+			resp := &proto.GetDataResponse{Data: []byte("test")}
+			return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
+		case opcodes.OpGetChildren:
+			resp := &proto.GetChildrenResponse{Children: []string{"test"}}
+			return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
+		default:
+			continue
+		}
+	}
+
+}
+
+func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
+	sendBuf, err := io.SerializeWriters(resp...)
+	if err != nil {
+		return err
+	}
+	if _, err = conn.Write(sendBuf); err != nil {
+		return err
+	}
+	return nil
 }

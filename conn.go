@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/facebookincubator/zk/opcodes"
 	"log"
 	"math"
 	"net"
@@ -133,7 +134,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	request := &proto.GetDataRequest{Path: path}
 	response := &proto.GetDataResponse{}
 
-	if err := c.rpc(opGetData, request, response); err != nil {
+	if err := c.rpc(opcodes.OpGetData, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetData request: %w", err)
 	}
 
@@ -145,7 +146,7 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 	request := &proto.GetChildrenRequest{Path: path}
 	response := &proto.GetChildrenResponse{}
 
-	if err := c.rpc(opGetChildren, request, response); err != nil {
+	if err := c.rpc(opcodes.OpGetChildren, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetChildren request: %w", err)
 	}
 
@@ -206,7 +207,7 @@ func (c *Conn) handleReads() {
 				log.Printf("could not decode response struct: %v", err)
 				break
 			}
-			if replyHeader.Xid == pingXID {
+			if replyHeader.Xid == opcodes.PingXID {
 				continue // ignore ping responses
 			}
 
@@ -232,8 +233,8 @@ func (c *Conn) keepAlive() {
 		select {
 		case <-pingTicker.C:
 			header := &proto.RequestHeader{
-				Xid:  pingXID,
-				Type: opPing,
+				Xid:  opcodes.PingXID,
+				Type: opcodes.OpPing,
 			}
 			sendBuf, err := io.SerializeWriters(header)
 			if err != nil {

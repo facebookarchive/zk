@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/integration"
-	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/testutils"
 )
 
@@ -133,14 +132,8 @@ func TestGetDataSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
+	go server.Start()
 	defer server.Close()
-
-	go func() {
-		if err := server.Handler(&proto.ConnectRequest{}, &proto.ConnectResponse{}); err != nil {
-			t.Errorf("unexpected handler error: %v", err)
-			return
-		}
-	}()
 
 	client := Client{}
 	conn, err := client.DialContext(context.Background(), server.Addr().Network(), server.Addr().String())
@@ -150,13 +143,6 @@ func TestGetDataSimple(t *testing.T) {
 	defer conn.Close()
 
 	expected := []byte("test")
-	go func() {
-		if err = server.Handler(&proto.GetDataRequest{}, &proto.GetDataResponse{Data: expected}); err != nil {
-			t.Errorf("unexpected handler error: %v", err)
-			return
-		}
-	}()
-
 	res, err := conn.GetData("/")
 	if err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
