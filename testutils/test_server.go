@@ -2,10 +2,10 @@ package testutils
 
 import (
 	"fmt"
-	"github.com/facebookincubator/zk/internal/proto"
-	"github.com/facebookincubator/zk/io"
 	"net"
 
+	"github.com/facebookincubator/zk/internal/proto"
+	"github.com/facebookincubator/zk/io"
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
@@ -47,6 +47,11 @@ func (l *TestServer) Handler(req jute.RecordReader, resp jute.RecordWriter) erro
 	return l.serializeAndSend(&proto.ReplyHeader{Xid: header.Xid}, resp)
 }
 
+// Close closes the test server's listener.
+func (l *TestServer) Close() error {
+	return l.listener.Close()
+}
+
 func (l *TestServer) onInit(req jute.RecordReader, resp jute.RecordWriter) error {
 	conn, err := l.listener.Accept()
 	if err != nil {
@@ -70,11 +75,6 @@ func (l *TestServer) serializeAndSend(resp ...jute.RecordWriter) error {
 		return err
 	}
 	return nil
-}
-
-// Close closes the test server's listener.
-func (l *TestServer) Close() error {
-	return l.listener.Close()
 }
 
 func newLocalListener() net.Listener {
