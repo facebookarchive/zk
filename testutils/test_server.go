@@ -70,15 +70,14 @@ func (s *TestServer) handler() {
 }
 
 func handleConn(conn net.Conn) error {
-	if err := jute.NewBinaryDecoder(conn).ReadRecord(&proto.ConnectRequest{}); err != nil {
+	dec := jute.NewBinaryDecoder(conn)
+	if err := dec.ReadRecord(&proto.ConnectRequest{}); err != nil {
 		return err
 	}
-
 	if err := serializeAndSend(conn, &proto.ConnectResponse{}); err != nil {
 		return err
 	}
 
-	dec := jute.NewBinaryDecoder(conn)
 	for {
 		if _, err := dec.ReadInt(); err != nil {
 			continue
