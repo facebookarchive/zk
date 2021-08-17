@@ -129,7 +129,10 @@ func TestGetDataSimple(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping in-memory tests for CI")
 	}
-	server := testutils.NewServer()
+	server, err := testutils.NewServer()
+	if err != nil {
+		t.Fatalf("error creating test server: %v", err)
+	}
 	defer server.Close()
 
 	go func() {
