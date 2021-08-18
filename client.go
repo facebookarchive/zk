@@ -52,6 +52,11 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 	return children, nil
 }
 
+// Close closes the client's underlying connection, cancelling any RPCs currently in-flight.
+func (client *Client) Close() error {
+	return client.conn.Close()
+}
+
 // doRetry makes attempts at connection and RPC execution according to the MaxRetries parameter.
 // If the MaxRetries value is not set, the RPC is executed only once.
 func (client *Client) doRetry(ctx context.Context, fun func() error) error {
