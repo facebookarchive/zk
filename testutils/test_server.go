@@ -20,14 +20,17 @@ type TestServer struct {
 	listener net.Listener
 }
 
-// NewServer creates a new TestServer instance with a default local listener.
+// NewServer creates and starts a new TestServer instance with a default local listener.
+// Started servers should be closed by calling Close.
 func NewServer() (*TestServer, error) {
 	l, err := newLocalListener()
 	if err != nil {
 		return nil, err
 	}
+	server := &TestServer{listener: l}
+	go server.handler()
 
-	return &TestServer{listener: l}, nil
+	return server, nil
 }
 
 // Addr returns the address on which this test server is listening on.
@@ -38,11 +41,6 @@ func (s *TestServer) Addr() net.Addr {
 // Close closes the test server's listener.
 func (s *TestServer) Close() error {
 	return s.listener.Close()
-}
-
-// Start starts the test server and its handler in a separate goroutine.
-func (s *TestServer) Start() {
-	go s.handler()
 }
 
 func newLocalListener() (net.Listener, error) {
