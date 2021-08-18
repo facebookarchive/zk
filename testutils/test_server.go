@@ -55,6 +55,7 @@ func (s *TestServer) handler() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
+			log.Printf("accept error: %v", err)
 			continue
 		}
 
@@ -78,7 +79,7 @@ func handleConn(conn net.Conn) error {
 	dec := jute.NewBinaryDecoder(conn)
 	for {
 		if _, err := dec.ReadInt(); err != nil {
-			continue
+			return fmt.Errorf("error reading request length: %w", err)
 		}
 
 		header := &proto.RequestHeader{}
