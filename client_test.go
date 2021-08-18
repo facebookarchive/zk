@@ -46,7 +46,7 @@ func TestClientRetryLogic(t *testing.T) {
 		Network:    "tcp",
 		conn:       &mockConnRPC{retriesUntilFunctional: defaultMaxRetries},
 	}
-	defer client.Close()
+	defer client.Reset()
 
 	expected := []string{"zookeeper"}
 	children, err := client.GetChildren(context.Background(), "/")
@@ -65,7 +65,7 @@ func TestClientRetryLogicFails(t *testing.T) {
 		Network:    "tcp",
 		conn:       &mockConnRPC{retriesUntilFunctional: defaultMaxRetries + 1},
 	}
-	defer client.Close()
+	defer client.Reset()
 
 	expectedErr := fmt.Errorf("connection failed after %d retries: %w", defaultMaxRetries, testError)
 	_, err := client.GetChildren(context.Background(), "/")
@@ -80,7 +80,7 @@ func TestClientContextCanceled(t *testing.T) {
 		Network:    "tcp",
 		conn:       &mockConnRPC{},
 	}
-	defer client.Close()
+	defer client.Reset()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

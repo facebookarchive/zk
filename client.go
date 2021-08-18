@@ -52,8 +52,9 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 	return children, nil
 }
 
-// Close closes the client's underlying connection, cancelling any RPCs currently in-flight.
-func (client *Client) Close() error {
+// Reset closes the client's underlying connection, cancelling any RPCs currently in-flight.
+// Future RPC calls will need to re-initialize the connection.
+func (client *Client) Reset() error {
 	return client.conn.Close()
 }
 
