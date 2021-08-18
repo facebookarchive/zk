@@ -77,6 +77,7 @@ func TestClientContextCanceled(t *testing.T) {
 		MaxRetries: defaultMaxRetries,
 		Network:    "tcp",
 	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
