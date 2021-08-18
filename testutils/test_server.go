@@ -56,7 +56,7 @@ func (s *TestServer) handler() {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			log.Printf("accept error: %v", err)
-			continue
+			return
 		}
 
 		go func() {
