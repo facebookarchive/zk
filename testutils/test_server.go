@@ -29,7 +29,7 @@ func NewServer() (*TestServer, error) {
 	return &TestServer{listener: l}, nil
 }
 
-// Addr returns the addres on which this test server is listening on.
+// Addr returns the address on which this test server is listening on.
 func (s *TestServer) Addr() net.Addr {
 	return s.listener.Addr()
 }
@@ -48,7 +48,7 @@ func (s *TestServer) Start() {
 func newLocalListener() (net.Listener, error) {
 	listener, err := net.Listen("tcp", defaultListenAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to listen on a port: %v", err)
+		return nil, fmt.Errorf("failed to listen on a port: %w", err)
 	}
 
 	return listener, nil
@@ -62,7 +62,7 @@ func (s *TestServer) handler() {
 		}
 
 		go func() {
-			if err := handleConn(conn); err != nil {
+			if err = handleConn(conn); err != nil {
 				return
 			}
 		}()
@@ -99,7 +99,6 @@ func handleConn(conn net.Conn) error {
 			continue
 		}
 	}
-
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
@@ -110,5 +109,6 @@ func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
 	if _, err = conn.Write(sendBuf); err != nil {
 		return err
 	}
+
 	return nil
 }

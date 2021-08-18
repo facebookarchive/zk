@@ -89,7 +89,9 @@ func TestGetDataNoTimeout(t *testing.T) {
 			t.Fatalf("unexpected error calling GetData: %v", err)
 		}
 	}
+
 }
+
 func TestGetChildrenDefault(t *testing.T) {
 	cfg := integration.DefaultConfig()
 
@@ -142,12 +144,11 @@ func TestGetDataSimple(t *testing.T) {
 	}
 	defer conn.Close()
 
-	expected := []byte("test")
 	res, err := conn.GetData("/")
 	if err != nil {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
-	if !bytes.Equal(expected, res) {
+	if expected := []byte("test"); !bytes.Equal(expected, res) {
 		t.Fatalf("expected %v got %v", expected, res)
 	}
 }
