@@ -85,19 +85,19 @@ func handleConn(conn net.Conn) error {
 		if err := dec.ReadRecord(header); err != nil {
 			return fmt.Errorf("error reading RequestHeader: %w", err)
 		}
+
+		var resp jute.RecordWriter
 		switch header.Type {
 		case io.OpGetData:
-			resp := &proto.GetDataResponse{Data: []byte("test")}
-			if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
-				return err
-			}
+			resp = &proto.GetDataResponse{Data: []byte("test")}
 		case io.OpGetChildren:
-			resp := &proto.GetChildrenResponse{Children: []string{"test"}}
-			if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
-				return err
-			}
+			resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 		default:
 			continue
+		}
+
+		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
+			return err
 		}
 	}
 }
