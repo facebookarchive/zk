@@ -12,7 +12,6 @@ import (
 
 	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/io"
-	"github.com/facebookincubator/zk/opcodes"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -134,7 +133,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	request := &proto.GetDataRequest{Path: path}
 	response := &proto.GetDataResponse{}
 
-	if err := c.rpc(opcodes.OpGetData, request, response); err != nil {
+	if err := c.rpc(io.OpGetData, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetData request: %w", err)
 	}
 
@@ -146,7 +145,7 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 	request := &proto.GetChildrenRequest{Path: path}
 	response := &proto.GetChildrenResponse{}
 
-	if err := c.rpc(opcodes.OpGetChildren, request, response); err != nil {
+	if err := c.rpc(io.OpGetChildren, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetChildren request: %w", err)
 	}
 
@@ -207,7 +206,7 @@ func (c *Conn) handleReads() {
 				log.Printf("could not decode response struct: %v", err)
 				break
 			}
-			if replyHeader.Xid == opcodes.PingXID {
+			if replyHeader.Xid == io.PingXID {
 				continue // ignore ping responses
 			}
 
@@ -233,8 +232,8 @@ func (c *Conn) keepAlive() {
 		select {
 		case <-pingTicker.C:
 			header := &proto.RequestHeader{
-				Xid:  opcodes.PingXID,
-				Type: opcodes.OpPing,
+				Xid:  io.PingXID,
+				Type: io.OpPing,
 			}
 			sendBuf, err := io.SerializeWriters(header)
 			if err != nil {

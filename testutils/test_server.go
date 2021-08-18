@@ -7,7 +7,6 @@ import (
 
 	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/io"
-	"github.com/facebookincubator/zk/opcodes"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -87,10 +86,10 @@ func handleConn(conn net.Conn) error {
 			return fmt.Errorf("error reading RequestHeader: %w", err)
 		}
 		switch header.Type {
-		case opcodes.OpGetData:
+		case io.OpGetData:
 			resp := &proto.GetDataResponse{Data: []byte("test")}
 			return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
-		case opcodes.OpGetChildren:
+		case io.OpGetChildren:
 			resp := &proto.GetChildrenResponse{Children: []string{"test"}}
 			return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
 		default:
