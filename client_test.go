@@ -76,7 +76,6 @@ func TestClientContextCanceled(t *testing.T) {
 	client := &Client{
 		MaxRetries: defaultMaxRetries,
 		Network:    "tcp",
-		conn:       &mockConnRPC{},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
