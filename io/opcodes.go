@@ -4,10 +4,9 @@ const (
 	// PingXID represents the XID which is used in ping/keepalive packet headers.
 	PingXID = -2
 
-	// OpGetData is the opcode for GetData requests.
-	OpGetData = 4
-	// OpGetChildren is the opcode for GetChildren requests.
+	// OpGetData and other constants with the same prefix represent codes used by Zookeeper to differentiate requests.
+	// reference: https://zookeeper.apache.org/doc/r3.4.8/api/constant-values.html#org.apache.zookeeper.ZooDefs.OpCode.getData
+	OpGetData     = 4
 	OpGetChildren = 8
-	// OpPing is the opcode for ping/keepalive requests.
-	OpPing = 11
+	OpPing        = 11
 )

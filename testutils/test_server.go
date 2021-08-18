@@ -88,10 +88,14 @@ func handleConn(conn net.Conn) error {
 		switch header.Type {
 		case io.OpGetData:
 			resp := &proto.GetDataResponse{Data: []byte("test")}
-			return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
+			if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
+				return err
+			}
 		case io.OpGetChildren:
 			resp := &proto.GetChildrenResponse{Children: []string{"test"}}
-			return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
+			if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
+				return err
+			}
 		default:
 			continue
 		}
