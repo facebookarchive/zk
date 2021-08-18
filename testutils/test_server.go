@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/facebookincubator/zk/internal/proto"
@@ -62,7 +63,7 @@ func (s *TestServer) handler() {
 
 		go func() {
 			if err = handleConn(conn); err != nil {
-				return
+				log.Printf("handler error: %v", err)
 			}
 		}()
 	}
@@ -70,11 +71,11 @@ func (s *TestServer) handler() {
 
 func handleConn(conn net.Conn) error {
 	if err := jute.NewBinaryDecoder(conn).ReadRecord(&proto.ConnectRequest{}); err != nil {
-		return err
+		return fmt.Errorf("error reading ConnectRequest: %w", err)
 	}
 
 	if err := serializeAndSend(conn, &proto.ConnectResponse{}); err != nil {
-		return err
+		return fmt.Errorf("error sending ConnectResponse: %w", err)
 	}
 
 	dec := jute.NewBinaryDecoder(conn)
@@ -85,7 +86,7 @@ func handleConn(conn net.Conn) error {
 
 		header := &proto.RequestHeader{}
 		if err := dec.ReadRecord(header); err != nil {
-			return err
+			return fmt.Errorf("error reading RequestHeader: %w", err)
 		}
 		switch header.Type {
 		case opcodes.OpGetData:
@@ -103,10 +104,10 @@ func handleConn(conn net.Conn) error {
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
 	sendBuf, err := io.SerializeWriters(resp...)
 	if err != nil {
-		return err
+		return fmt.Errorf("reply serialization error: %w", err)
 	}
 	if _, err = conn.Write(sendBuf); err != nil {
-		return err
+		return fmt.Errorf("reply write error: %w", err)
 	}
 
 	return nil
