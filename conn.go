@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/facebookincubator/zk/opcodes"
 	"log"
 	"math"
 	"net"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/io"
+	"github.com/facebookincubator/zk/opcodes"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
