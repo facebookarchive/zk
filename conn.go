@@ -24,8 +24,6 @@ type Conn struct {
 
 	// the client sends a requested timeout, the server responds with the timeout that it can give the client
 	sessionTimeout time.Duration
-	// the client sends pings to the server in this interval to keep the connection alive
-	pingInterval time.Duration
 
 	reqs          sync.Map
 	cancelSession context.CancelFunc
@@ -121,8 +119,6 @@ func (c *Conn) authenticate() error {
 	if response.TimeOut > 0 {
 		c.sessionTimeout = time.Duration(response.TimeOut) * time.Millisecond
 	}
-	// set the ping interval to half of the session timeout, according to Zookeeper documentation
-	c.pingInterval = c.sessionTimeout / 2
 
 	return nil
 }
@@ -224,8 +220,10 @@ func (c *Conn) handleReads() {
 }
 
 func (c *Conn) keepAlive() {
-	pingTicker := time.NewTicker(c.pingInterval)
+	// set the ping interval to half of the session timeout, according to Zookeeper documentation
+	pingTicker := time.NewTicker(c.sessionTimeout / 2)
 	defer pingTicker.Stop()
+
 	defer c.Close()
 	for {
 		select {
