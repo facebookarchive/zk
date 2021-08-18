@@ -134,7 +134,7 @@ func TestGetDataSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
-	go server.Start()
+	server.Start()
 	defer server.Close()
 
 	conn, err := DialContext(context.Background(), server.Addr().Network(), server.Addr().String())

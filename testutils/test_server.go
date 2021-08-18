@@ -39,10 +39,9 @@ func (s *TestServer) Close() error {
 	return s.listener.Close()
 }
 
-// Start starts the test server and its handler.
-// Calls to this method are blocking so calling in a separate goroutine is recommended.
+// Start starts the test server and its handler in a separate goroutine.
 func (s *TestServer) Start() {
-	s.handler()
+	go s.handler()
 }
 
 func newLocalListener() (net.Listener, error) {
