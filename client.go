@@ -3,6 +3,7 @@ package zk
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"time"
 )
@@ -72,6 +73,7 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 
 		err = fun()
 		if err != nil {
+			log.Printf("got error at try %d: %v", i, err)
 			continue // retry
 		}
 

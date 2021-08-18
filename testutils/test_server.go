@@ -14,20 +14,29 @@ import (
 // defaultListenAddress is the default address on which the test server listens.
 const defaultListenAddress = "127.0.0.1:"
 
+type HandlerFunc func(net.Conn, jute.Decoder) error
+
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
 	listener net.Listener
+	Handler  HandlerFunc
 }
 
-// NewServer creates and starts a new TestServer instance with a default local listener.
+// ServeDefault creates and starts a new TestServer instance with a default local listener and handler.
 // Started servers should be closed by calling Close.
-func NewServer() (*TestServer, error) {
+func ServeDefault() (*TestServer, error) {
+	return Serve(DefaultHandler)
+}
+
+// Serve creates and starts a new TestServer instance with a custom handler.
+// Started servers should be closed by calling Close.
+func Serve(handler HandlerFunc) (*TestServer, error) {
 	l, err := newLocalListener()
 	if err != nil {
 		return nil, err
 	}
-	server := &TestServer{listener: l}
-	go server.handler()
+	server := &TestServer{listener: l, Handler: handler}
+	go server.handle()
 
 	return server, nil
 }
@@ -51,7 +60,7 @@ func newLocalListener() (net.Listener, error) {
 	return listener, nil
 }
 
-func (s *TestServer) handler() {
+func (s *TestServer) handle() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -60,14 +69,14 @@ func (s *TestServer) handler() {
 		}
 
 		go func() {
-			if err = handleConn(conn); err != nil {
+			if err = s.handleConn(conn); err != nil {
 				log.Printf("handler error: %v", err)
 			}
 		}()
 	}
 }
 
-func handleConn(conn net.Conn) error {
+func (s *TestServer) handleConn(conn net.Conn) error {
 	if err := jute.NewBinaryDecoder(conn).ReadRecord(&proto.ConnectRequest{}); err != nil {
 		return fmt.Errorf("error reading ConnectRequest: %w", err)
 	}
@@ -82,25 +91,40 @@ func handleConn(conn net.Conn) error {
 			return fmt.Errorf("error reading request length: %w", err)
 		}
 
-		header := &proto.RequestHeader{}
-		if err := dec.ReadRecord(header); err != nil {
-			return fmt.Errorf("error reading RequestHeader: %w", err)
-		}
-
-		var resp jute.RecordWriter
-		switch header.Type {
-		case io.OpGetData:
-			resp = &proto.GetDataResponse{Data: []byte("test")}
-		case io.OpGetChildren:
-			resp = &proto.GetChildrenResponse{Children: []string{"test"}}
-		default:
-			continue
-		}
-
-		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
+		if err := s.Handler(conn, dec); err != nil {
 			return err
 		}
 	}
+}
+
+func DefaultHandler(conn net.Conn, dec jute.Decoder) error {
+	header := &proto.RequestHeader{}
+	if err := dec.ReadRecord(header); err != nil {
+		return fmt.Errorf("error reading RequestHeader: %w", err)
+	}
+
+	var resp jute.RecordWriter
+	fmt.Printf("%+v", header)
+	switch header.Type {
+	case io.OpGetData:
+		if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
+			return fmt.Errorf("error reading request: %v", err)
+		}
+		resp = &proto.GetDataResponse{Data: []byte("test")}
+	case io.OpGetChildren:
+		if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
+			return fmt.Errorf("error reading request: %v", err)
+		}
+		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
+	default:
+		return fmt.Errorf("unrecognized header type: %v", header.Type)
+	}
+
+	if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
