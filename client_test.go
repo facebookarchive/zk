@@ -13,17 +13,17 @@ import (
 const defaultMaxRetries = 5
 
 func TestClientRetryLogic(t *testing.T) {
-	client := &Client{
-		MaxRetries: defaultMaxRetries,
-		Network:    "tcp",
-	}
-
 	server, err := testutils.NewServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
 	defer server.Close()
-	client.Ensemble = server.Addr().String()
+
+	client := &Client{
+		MaxRetries: defaultMaxRetries,
+		Network:    server.Addr().Network(),
+		Ensemble:   server.Addr().String(),
+	}
 
 	children, err := client.GetChildren(context.Background(), "/")
 	if err != nil {
@@ -36,19 +36,19 @@ func TestClientRetryLogic(t *testing.T) {
 }
 
 func TestClientRetryLogicFails(t *testing.T) {
-	client := &Client{
-		MaxRetries: defaultMaxRetries,
-		Network:    "tcp",
-	}
 	server, err := testutils.NewServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
-	client.Ensemble = server.Addr().String()
-
 	// close server before client makes RPC call
 	if err = server.Close(); err != nil {
 		t.Fatalf("unexpected error closing server: %v", err)
+	}
+
+	client := &Client{
+		MaxRetries: defaultMaxRetries,
+		Network:    server.Addr().Network(),
+		Ensemble:   server.Addr().String(),
 	}
 
 	_, err = client.GetChildren(context.Background(), "/")
