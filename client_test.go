@@ -67,8 +67,7 @@ func TestClientContextCanceled(t *testing.T) {
 	cancel()
 
 	// expect the client not to retry when ctx is canceled
-	expected := ctx.Err()
-	if _, err := client.GetData(ctx, "/"); !errors.As(err, &expected) {
+	if _, err := client.GetData(ctx, "/"); !errors.Is(err, ctx.Err()) {
 		t.Fatalf("unexpected error calling GetData: %v", err)
 	}
 }
