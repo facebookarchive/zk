@@ -219,9 +219,7 @@ func (c *Conn) handleReads() {
 			value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
 			if ok {
 				pending := value.(*pendingRequest)
-				if replyHeader.Err != 0 {
-					pending.errorCode = replyHeader.Err
-				}
+				pending.errorCode = replyHeader.Err
 				if err = dec.ReadRecord(pending.reply); err != nil {
 					log.Printf("could not decode response struct: %v", err)
 					return
