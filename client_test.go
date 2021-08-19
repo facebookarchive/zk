@@ -29,9 +29,10 @@ func TestClientRetryLogic(t *testing.T) {
 			}
 
 			if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
-				return err
+				return fmt.Errorf("error reading request body: %w", err)
 			}
 
+			// return reply with error code
 			sendBuf, err := io.SerializeWriters(&proto.ReplyHeader{Xid: header.Xid, Err: 1}, &proto.GetChildrenResponse{})
 			if err != nil {
 				return fmt.Errorf("reply serialization error: %w", err)

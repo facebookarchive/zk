@@ -14,12 +14,13 @@ import (
 // defaultListenAddress is the default address on which the test server listens.
 const defaultListenAddress = "127.0.0.1:"
 
+// HandlerFunc is the function the server uses to return a response to the client based on the request received.
 type HandlerFunc func(net.Conn, jute.Decoder) error
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
-	listener net.Listener
-	Handler  HandlerFunc
+	listener       net.Listener
+	RequestHandler HandlerFunc
 }
 
 // ServeDefault creates and starts a new TestServer instance with a default local listener and handler.
@@ -35,8 +36,8 @@ func Serve(handler HandlerFunc) (*TestServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	server := &TestServer{listener: l, Handler: handler}
-	go server.handle()
+	server := &TestServer{listener: l, RequestHandler: handler}
+	go server.accept()
 
 	return server, nil
 }
@@ -60,7 +61,7 @@ func newLocalListener() (net.Listener, error) {
 	return listener, nil
 }
 
-func (s *TestServer) handle() {
+func (s *TestServer) accept() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -70,7 +71,7 @@ func (s *TestServer) handle() {
 
 		go func() {
 			if err = s.handleConn(conn); err != nil {
-				log.Printf("handler error: %v", err)
+				log.Printf("connection handler error: %v", err)
 			}
 		}()
 	}
@@ -91,12 +92,13 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return fmt.Errorf("error reading request length: %w", err)
 		}
 
-		if err := s.Handler(conn, dec); err != nil {
-			return err
+		if err := s.RequestHandler(conn, dec); err != nil {
+			return fmt.Errorf("request handler error: %w", err)
 		}
 	}
 }
 
+// DefaultHandler reads the request header and body, sending a default response based on the request received.
 func DefaultHandler(conn net.Conn, dec jute.Decoder) error {
 	header := &proto.RequestHeader{}
 	if err := dec.ReadRecord(header); err != nil {
@@ -104,27 +106,22 @@ func DefaultHandler(conn net.Conn, dec jute.Decoder) error {
 	}
 
 	var resp jute.RecordWriter
-	fmt.Printf("%+v", header)
 	switch header.Type {
 	case io.OpGetData:
 		if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
-			return fmt.Errorf("error reading request: %v", err)
+			return fmt.Errorf("error reading request: %w", err)
 		}
 		resp = &proto.GetDataResponse{Data: []byte("test")}
 	case io.OpGetChildren:
 		if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
-			return fmt.Errorf("error reading request: %v", err)
+			return fmt.Errorf("error reading request: %w", err)
 		}
 		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 	default:
-		return fmt.Errorf("unrecognized header type: %v", header.Type)
+		return fmt.Errorf("unrecognized header type: %d", header.Type)
 	}
 
-	if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
-		return err
-	}
-
-	return nil
+	return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
