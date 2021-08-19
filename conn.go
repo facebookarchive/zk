@@ -31,6 +31,11 @@ type Conn struct {
 	sessionCtx    context.Context
 }
 
+type pendingRequest struct {
+	reply jute.RecordReader
+	done  chan struct{}
+}
+
 // isAlive() checks the TCP connection is alive by reading from the sessionCtx channel.
 func (c *Conn) isAlive() bool {
 	select {
