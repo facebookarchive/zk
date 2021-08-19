@@ -2,6 +2,7 @@ package zk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -9,7 +10,7 @@ import (
 
 const defaultTimeout = 2 * time.Second
 
-var ErrMaxRetries = fmt.Errorf("connection failed after MaxRetries")
+var ErrMaxRetries = errors.New("connection failed after MaxRetries")
 
 // Client represents a Zookeeper client abstraction with additional configuration parameters.
 type Client struct {
@@ -32,14 +33,11 @@ func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) 
 		data, err = client.conn.GetData(path)
 		return err
 	})
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	if err != nil {
+	if ctx.Err() == nil && err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMaxRetries, err)
 	}
 
-	return data, nil
+	return data, ctx.Err()
 }
 
 // GetChildren uses the retryable client to call GetChildren on a Zookeeper server.
@@ -50,14 +48,11 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 		children, err = client.conn.GetChildren(path)
 		return err
 	})
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	if err != nil {
+	if ctx.Err() == nil && err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMaxRetries, err)
 	}
 
-	return children, nil
+	return children, ctx.Err()
 }
 
 // Reset closes the client's underlying connection, cancelling any RPCs currently in-flight.
