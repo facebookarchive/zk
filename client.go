@@ -9,6 +9,8 @@ import (
 
 const defaultTimeout = 2 * time.Second
 
+var ErrMaxRetries = fmt.Errorf("connection failed after MaxRetries")
+
 // Client represents a Zookeeper client abstraction with additional configuration parameters.
 type Client struct {
 	// Dialer is a function to be used to establish a connection to a single host.
@@ -31,7 +33,7 @@ func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) 
 		return err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("connection failed after %d retries: %w", client.MaxRetries, err)
+		return nil, fmt.Errorf("%w: %v", ErrMaxRetries, err)
 	}
 
 	return data, nil
@@ -46,7 +48,7 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 		return err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("connection failed after %d retries: %w", client.MaxRetries, err)
+		return nil, fmt.Errorf("%w: %v", ErrMaxRetries, err)
 	}
 
 	return children, nil

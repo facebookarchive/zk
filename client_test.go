@@ -3,7 +3,6 @@ package zk
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -53,9 +52,8 @@ func TestClientRetryLogicFails(t *testing.T) {
 	}
 
 	_, err = client.GetChildren(context.Background(), "/")
-	expectedErr := fmt.Errorf("connection failed after %d retries: %w", defaultMaxRetries, errors.Unwrap(err))
-	if err == nil || err.Error() != expectedErr.Error() {
-		t.Fatalf("expected error: \"%v\", got error: \"%v\"", expectedErr, err)
+	if err == nil || !errors.Is(err, ErrMaxRetries) {
+		t.Fatalf("expected error: \"%v\", got error: \"%v\"", ErrMaxRetries, err)
 	}
 }
 
