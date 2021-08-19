@@ -32,6 +32,9 @@ func (client *Client) GetData(ctx context.Context, path string) ([]byte, error) 
 		data, err = client.conn.GetData(path)
 		return err
 	})
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMaxRetries, err)
 	}
@@ -47,6 +50,9 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 		children, err = client.conn.GetChildren(path)
 		return err
 	})
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrMaxRetries, err)
 	}
