@@ -41,15 +41,15 @@ func TestClientRetryLogicFails(t *testing.T) {
 		t.Fatalf("error creating test server: %v", err)
 	}
 
-	// close server before client makes RPC call
-	if err = server.Close(); err != nil {
-		t.Fatalf("unexpected error closing server: %v", err)
-	}
-
 	client := &Client{
 		MaxRetries: defaultMaxRetries,
 		Network:    server.Addr().Network(),
 		Ensemble:   server.Addr().String(),
+	}
+
+	// close server before client makes RPC call
+	if err = server.Close(); err != nil {
+		t.Fatalf("unexpected error closing server: %v", err)
 	}
 
 	_, err = client.GetChildren(context.Background(), "/")
