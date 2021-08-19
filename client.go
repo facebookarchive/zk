@@ -19,7 +19,7 @@ type Client struct {
 	Network    string
 	Ensemble   string
 
-	conn zkConn
+	conn *Conn
 }
 
 // GetData uses the retryable client to call Get on a Zookeeper server.
