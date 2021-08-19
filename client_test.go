@@ -18,6 +18,8 @@ import (
 const defaultMaxRetries = 5
 
 func TestClientRetryLogic(t *testing.T) {
+	// Create a new handler which will make the test server return an error for a set number of tries.
+	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
 	failCalls := defaultMaxRetries - 1
 	server, err := testutils.Serve(func(conn net.Conn, dec jute.Decoder) error {
 		if failCalls > 0 {
