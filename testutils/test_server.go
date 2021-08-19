@@ -68,6 +68,8 @@ func (s *TestServer) handler() {
 }
 
 func handleConn(conn net.Conn) error {
+	defer conn.Close()
+
 	if err := jute.NewBinaryDecoder(conn).ReadRecord(&proto.ConnectRequest{}); err != nil {
 		return fmt.Errorf("error reading ConnectRequest: %w", err)
 	}
@@ -90,11 +92,19 @@ func handleConn(conn net.Conn) error {
 		var resp jute.RecordWriter
 		switch header.Type {
 		case io.OpGetData:
+			if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
+				return fmt.Errorf("error reading GetDataRequest: %w", err)
+			}
+
 			resp = &proto.GetDataResponse{Data: []byte("test")}
 		case io.OpGetChildren:
+			if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
+				return fmt.Errorf("error reading GetChildrenRequest: %w", err)
+			}
+
 			resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 		default:
-			continue
+			return fmt.Errorf("unrecognized header type: %d", header.Type)
 		}
 
 		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp); err != nil {
