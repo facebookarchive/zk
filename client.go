@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const defaultTimeout = 2 * time.Second
-
 var ErrMaxRetries = errors.New("connection failed after MaxRetries")
 
 // Client represents a Zookeeper client abstraction with additional configuration parameters.

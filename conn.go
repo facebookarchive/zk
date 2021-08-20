@@ -16,6 +16,8 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
+const defaultTimeout = 2 * time.Second
+
 // Conn represents a client connection to a Zookeeper server and parameters needed to handle its lifetime.
 type Conn struct {
 	conn net.Conn
