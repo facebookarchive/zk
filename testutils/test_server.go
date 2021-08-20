@@ -78,6 +78,8 @@ func (s *TestServer) accept() {
 }
 
 func (s *TestServer) handleConn(conn net.Conn) error {
+	defer conn.Close()
+
 	if err := jute.NewBinaryDecoder(conn).ReadRecord(&proto.ConnectRequest{}); err != nil {
 		return fmt.Errorf("error reading ConnectRequest: %w", err)
 	}
