@@ -16,6 +16,14 @@ type Error struct {
 	Code Code
 }
 
+func (e Error) Error() string {
+	if err, ok := errToString[e.Code]; ok {
+		return err
+	}
+
+	return ""
+}
+
 // ref: https://github.com/apache/zookeeper/blob/master/zookeeper-client/zookeeper-client-c/include/zookeeper.h#L94
 const (
 	// System and server-side errors
@@ -65,12 +73,4 @@ var errToString = map[Code]string{
 	errMoved:             "zk: session moved to another server, so operation is ignored",
 	errZReconfigDisabled: "zk: attempts to perform a reconfiguration operation when it is disabled",
 	errArgs:              "zk: invalid arguments",
-}
-
-func (e Error) Error() string {
-	if err, ok := errToString[e.Code]; ok {
-		return err
-	}
-
-	return ""
 }
