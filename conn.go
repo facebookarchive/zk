@@ -201,30 +201,40 @@ func (c *Conn) handleReads() {
 			}
 			if err != nil {
 				log.Printf("could not decode response length: %v", err)
-				break
+				return
 			}
 
 			replyHeader := &proto.ReplyHeader{}
 			if err = dec.ReadRecord(replyHeader); err != nil {
 				log.Printf("could not decode response struct: %v", err)
-				break
+				return
 			}
 			if replyHeader.Xid == io.PingXID {
 				continue // ignore ping responses
 			}
 
-			value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
-			if ok {
-				pending := value.(*pendingRequest)
-				if err = dec.ReadRecord(pending.reply); err != nil {
-					log.Printf("could not decode response struct: %v", err)
-					return
-				}
-
-				pending.done <- struct{}{}
+			if err = c.sendReply(dec, replyHeader); err != nil {
+				log.Printf("error sending reply: %v", err)
+				return
 			}
 		}
 	}
+}
+
+// sendReply reads the reply from the connection and notifies the RPC caller when finished.
+func (c *Conn) sendReply(dec *jute.BinaryDecoder, replyHeader *proto.ReplyHeader) error {
+	value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
+	if ok {
+		pending := value.(*pendingRequest)
+
+		if err := dec.ReadRecord(pending.reply); err != nil {
+			return fmt.Errorf("could not decode response struct: %w", err)
+		}
+
+		pending.done <- struct{}{}
+	}
+
+	return nil
 }
 
 func (c *Conn) keepAlive() {
