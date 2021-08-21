@@ -43,7 +43,7 @@ func (client *Client) GetChildren(ctx context.Context, path string) ([]string, e
 	var err error
 	err = client.doRetry(ctx, func() error {
 		children, err = client.conn.GetChildren(path)
-		return fmt.Errorf("zk server returned error code: %w", &io.Error{Code: io.Code(-100)})
+		return err
 	})
 
 	return children, err
