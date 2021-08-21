@@ -249,11 +249,11 @@ func (c *Conn) keepAlive() {
 			sendBuf, err := io.SerializeWriters(header)
 			if err != nil {
 				log.Printf("error serializing ping request: %v", err)
-				continue
+				return
 			}
 			if _, err = c.conn.Write(sendBuf); err != nil {
 				log.Printf("error writing ping request to net.conn: %v", err)
-				continue
+				return
 			}
 		case <-c.sessionCtx.Done():
 			return
