@@ -16,7 +16,7 @@ const defaultListenAddress = "127.0.0.1:"
 
 // HandlerFunc is the function the server uses to return a response to the client based on the request received.
 // Note that custom handlers need to send a ReplyHeader before a response as per the Zookeeper protocol.
-type HandlerFunc func(net.Conn, *proto.RequestHeader) error
+type HandlerFunc func(*proto.RequestHeader) jute.RecordWriter
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -110,15 +110,14 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		default:
 			return fmt.Errorf("unrecognized header type: %d", header.Type)
 		}
+		response := s.ResponseHandler(header)
 
-		if err := s.ResponseHandler(conn, header); err != nil {
-			return fmt.Errorf("request handler error: %w", err)
-		}
+		return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response)
 	}
 }
 
-// DefaultHandler sends a default response based on the header received.
-func DefaultHandler(conn net.Conn, header *proto.RequestHeader) error {
+// DefaultHandler returns a default response based on the header received.
+func DefaultHandler(header *proto.RequestHeader) jute.RecordWriter {
 	var resp jute.RecordWriter
 	switch header.Type {
 	case io.OpGetData:
@@ -127,7 +126,7 @@ func DefaultHandler(conn net.Conn, header *proto.RequestHeader) error {
 		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 	}
 
-	return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, resp)
+	return resp
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
