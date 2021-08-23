@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -112,7 +113,7 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		}
 		response := s.ResponseHandler(header.Type)
 		if response == nil {
-			continue
+			return errors.New("handler returned nil response")
 		}
 
 		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
