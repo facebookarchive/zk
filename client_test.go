@@ -6,27 +6,13 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-zookeeper/jute/lib/go/jute"
-
 	"github.com/facebookincubator/zk/testutils"
 )
 
 const defaultMaxRetries = 5
 
 func TestClientRetryLogic(t *testing.T) {
-	failCalls := defaultMaxRetries
-
-	// Create a new handler which will make the test server return an error for a set number of tries.
-	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
-	server, err := testutils.NewServer(func(opcode int32) jute.RecordWriter {
-		if failCalls > 0 {
-			failCalls--
-			return nil // nil response causes error
-		}
-
-		return testutils.DefaultHandler(opcode)
-	})
-
+	server, err := testutils.NewDefaultServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
