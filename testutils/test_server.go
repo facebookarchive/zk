@@ -24,15 +24,15 @@ type TestServer struct {
 	ResponseHandler HandlerFunc
 }
 
-// ServeDefault creates and starts a new TestServer instance with a default local listener and handler.
+// NewDefaultServer creates and starts a new TestServer instance with a default local listener and handler.
 // Started servers should be closed by calling Close.
-func ServeDefault() (*TestServer, error) {
-	return Serve(DefaultHandler)
+func NewDefaultServer() (*TestServer, error) {
+	return NewServer(DefaultHandler)
 }
 
-// Serve creates and starts a new TestServer instance with a custom handler.
+// NewServer creates and starts a new TestServer instance with a custom handler.
 // Started servers should be closed by calling Close.
-func Serve(handler HandlerFunc) (*TestServer, error) {
+func NewServer(handler HandlerFunc) (*TestServer, error) {
 	l, err := newLocalListener()
 	if err != nil {
 		return nil, err

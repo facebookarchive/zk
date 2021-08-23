@@ -12,7 +12,7 @@ import (
 const defaultMaxRetries = 5
 
 func TestClientRetryLogic(t *testing.T) {
-	server, err := testutils.ServeDefault()
+	server, err := testutils.NewDefaultServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
@@ -35,7 +35,7 @@ func TestClientRetryLogic(t *testing.T) {
 }
 
 func TestClientRetryLogicFails(t *testing.T) {
-	server, err := testutils.ServeDefault()
+	server, err := testutils.NewDefaultServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}

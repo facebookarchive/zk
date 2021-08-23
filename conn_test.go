@@ -130,7 +130,7 @@ func TestGetDataSimple(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping local ZK mock tests for CI")
 	}
-	server, err := testutils.ServeDefault()
+	server, err := testutils.NewDefaultServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
