@@ -34,9 +34,9 @@ type Conn struct {
 }
 
 type pendingRequest struct {
-	reply   jute.RecordReader
-	success chan struct{}
-	error   chan *io.Error
+	reply jute.RecordReader
+	done  chan struct{}
+	error *io.Error
 }
 
 // isAlive() checks the TCP connection is alive by reading from the sessionCtx channel.
@@ -168,9 +168,8 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 	}
 
 	pending := &pendingRequest{
-		reply:   r,
-		success: make(chan struct{}, 1),
-		error:   make(chan *io.Error, 1),
+		reply: r,
+		done:  make(chan struct{}, 1),
 	}
 
 	c.reqs.Store(header.Xid, pending)
@@ -180,10 +179,11 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 	}
 
 	select {
-	case <-pending.success:
+	case <-pending.done:
+		if pending.error != nil {
+			return fmt.Errorf("zk server returned error code: %w", pending.error)
+		}
 		return nil
-	case err = <-pending.error:
-		return fmt.Errorf("zk server returned error code: %w", err)
 	case <-c.sessionCtx.Done():
 		return fmt.Errorf("session closed: %w", c.sessionCtx.Err())
 	case <-time.After(c.sessionTimeout):
@@ -220,16 +220,13 @@ func (c *Conn) handleReads() {
 		if ok {
 			pending := value.(*pendingRequest)
 			if replyHeader.Err != 0 {
-				pending.error <- &io.Error{Code: io.Code(replyHeader.Err)}
-				continue
-			}
-
-			if err = dec.ReadRecord(pending.reply); err != nil {
+				pending.error = &io.Error{Code: io.Code(replyHeader.Err)}
+			} else if err = dec.ReadRecord(pending.reply); err != nil {
 				log.Printf("could not decode response struct: %v", err)
 				return
 			}
 
-			pending.success <- struct{}{}
+			pending.done <- struct{}{}
 		}
 	}
 }
