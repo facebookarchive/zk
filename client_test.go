@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/go-zookeeper/jute/lib/go/jute"
-
 	"github.com/facebookincubator/zk/testutils"
+
+	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
 const defaultMaxRetries = 5
