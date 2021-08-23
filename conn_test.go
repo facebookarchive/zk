@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/integration"
+	zk_io "github.com/facebookincubator/zk/io"
 	"github.com/facebookincubator/zk/testutils"
 )
 
@@ -148,5 +149,36 @@ func TestGetDataSimple(t *testing.T) {
 	}
 	if expected := []byte("test"); !bytes.Equal(expected, res) {
 		t.Fatalf("expected %v got %v", expected, res)
+	}
+}
+
+func TestErrorCodeHandling(t *testing.T) {
+	server, err := integration.NewZKServer("3.6.2", integration.DefaultConfig())
+	if err != nil {
+		t.Fatalf("unexpected error while initializing zk server: %v", err)
+	}
+	defer func(server *integration.ZKServer) {
+		if err = server.Shutdown(); err != nil {
+			t.Fatalf("unexpected error while shutting down zk server: %v", err)
+		}
+	}(server)
+	if err = server.Run(); err != nil {
+		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
+		return
+	}
+
+	conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
+	if err != nil {
+		t.Fatalf("unexpected error dialing server: %v", err)
+	}
+	defer conn.Close()
+
+	// attempt to access node that does not exist
+	_, err = conn.GetChildren("/nonexisting")
+
+	// verify that the ZK server error has been processed properly
+	var ioError *zk_io.Error
+	if !errors.As(err, &ioError) {
+		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
 }
