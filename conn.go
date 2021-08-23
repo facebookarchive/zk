@@ -2,6 +2,7 @@ package zk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -190,47 +191,38 @@ func (c *Conn) handleReads() {
 	defer c.Close()
 	dec := jute.NewBinaryDecoder(c.conn)
 	for {
-		select {
-		case <-c.sessionCtx.Done():
+		if c.sessionCtx.Err() != nil {
 			return
-		default:
-			_, err := dec.ReadInt() // read response length
-			if err != nil {
-				log.Printf("could not decode response length: %v", err)
-				return
-			}
+		}
+		_, err := dec.ReadInt() // read response length
+		if errors.Is(err, net.ErrClosed) {
+			return // don't make further attempts to read from closed connection, close goroutine
+		}
+		if err != nil {
+			log.Printf("could not decode response length: %v", err)
+			return
+		}
 
-			replyHeader := &proto.ReplyHeader{}
-			if err = dec.ReadRecord(replyHeader); err != nil {
+		replyHeader := &proto.ReplyHeader{}
+		if err = dec.ReadRecord(replyHeader); err != nil {
+			log.Printf("could not decode response struct: %v", err)
+			return
+		}
+		if replyHeader.Xid == io.PingXID {
+			continue // ignore ping responses
+		}
+
+		value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
+		if ok {
+			pending := value.(*pendingRequest)
+			if err = dec.ReadRecord(pending.reply); err != nil {
 				log.Printf("could not decode response struct: %v", err)
 				return
 			}
-			if replyHeader.Xid == io.PingXID {
-				continue // ignore ping responses
-			}
 
-			if err = c.sendReply(dec, replyHeader); err != nil {
-				log.Printf("error sending reply: %v", err)
-				return
-			}
+			pending.done <- struct{}{}
 		}
 	}
-}
-
-// sendReply reads the reply from the connection and notifies the RPC caller when finished.
-func (c *Conn) sendReply(dec *jute.BinaryDecoder, replyHeader *proto.ReplyHeader) error {
-	value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
-	if ok {
-		pending := value.(*pendingRequest)
-
-		if err := dec.ReadRecord(pending.reply); err != nil {
-			return fmt.Errorf("could not decode response struct: %w", err)
-		}
-
-		pending.done <- struct{}{}
-	}
-
-	return nil
 }
 
 func (c *Conn) keepAlive() {

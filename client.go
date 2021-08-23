@@ -67,7 +67,6 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 
 		err = fun()
 		if err != nil {
-			client.conn.Close()
 			continue // retry
 		}
 
