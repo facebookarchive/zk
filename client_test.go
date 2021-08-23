@@ -71,16 +71,31 @@ func TestClientRetryLogicFails(t *testing.T) {
 }
 
 func TestClientContextCanceled(t *testing.T) {
+	calls := 0
+	server, err := testutils.NewServer(func(opcode int32) jute.RecordWriter {
+		calls++
+
+		return testutils.DefaultHandler(opcode)
+	})
+	if err != nil {
+		t.Fatalf("error creating test server: %v", err)
+	}
+
 	client := &Client{
 		MaxRetries: defaultMaxRetries,
-		Network:    "tcp",
+		Ensemble:   server.Addr().String(),
+		Network:    server.Addr().Network(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
 	// expect the client not to retry when ctx is canceled
-	if _, err := client.GetData(ctx, "/"); !errors.Is(err, ctx.Err()) {
+	if _, err = client.GetData(ctx, "/"); !errors.Is(err, ctx.Err()) {
 		t.Fatalf("unexpected error calling GetData: %v", err)
+	}
+	// fail if client attempted retries on canceled ctx
+	if calls > 1 {
+		t.Fatalf("ctx.Err() is non-retryable, expected only 1 call, got %d", calls)
 	}
 }
