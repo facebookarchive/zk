@@ -1,8 +1,11 @@
 package io
 
+// Error is a wrapper for all error codes that can be returned by a Zookeeper server.
 type Error struct {
 	Code Code
 }
+
+// Code is an error code returned in a ReplyHeader by a Zookeeper server.
 type Code int32
 
 func (e Error) Error() string {
