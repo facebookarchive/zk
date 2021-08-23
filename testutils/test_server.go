@@ -101,11 +101,11 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		switch header.Type {
 		case io.OpGetData:
 			if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
-				return fmt.Errorf("error reading request: %w", err)
+				return fmt.Errorf("error reading GetDataRequest: %w", err)
 			}
 		case io.OpGetChildren:
 			if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
-				return fmt.Errorf("error reading request: %w", err)
+				return fmt.Errorf("error reading GetChildrenRequest: %w", err)
 			}
 		default:
 			return fmt.Errorf("unrecognized header type: %d", header.Type)
