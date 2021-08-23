@@ -195,39 +195,37 @@ func (c *Conn) handleReads() {
 	defer c.Close()
 	dec := jute.NewBinaryDecoder(c.conn)
 	for {
-		select {
-		case <-c.sessionCtx.Done():
+		if c.sessionCtx.Err() != nil {
 			return
-		default:
-			_, err := dec.ReadInt() // read response length
-			if errors.Is(err, net.ErrClosed) {
-				return // don't make further attempts to read from closed connection, close goroutine
-			}
-			if err != nil {
-				log.Printf("could not decode response length: %v", err)
-				break
-			}
+		}
+		_, err := dec.ReadInt() // read response length
+		if errors.Is(err, net.ErrClosed) {
+			return // don't make further attempts to read from closed connection, close goroutine
+		}
+		if err != nil {
+			log.Printf("could not decode response length: %v", err)
+			return
+		}
 
-			replyHeader := &proto.ReplyHeader{}
-			if err = dec.ReadRecord(replyHeader); err != nil {
-				log.Printf("could not decode response struct: %v", err)
-				break
-			}
-			if replyHeader.Xid == io.PingXID {
-				continue // ignore ping responses
-			}
+		replyHeader := &proto.ReplyHeader{}
+		if err = dec.ReadRecord(replyHeader); err != nil {
+			log.Printf("could not decode response struct: %v", err)
+			return
+		}
+		if replyHeader.Xid == io.PingXID {
+			continue // ignore ping responses
+		}
 
-			value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
-			if ok {
-				pending := value.(*pendingRequest)
-				pending.errorCode = replyHeader.Err
+		value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
+		if ok {
+			pending := value.(*pendingRequest)
+			pending.errorCode = replyHeader.Err
 				if err = dec.ReadRecord(pending.reply); err != nil {
 					log.Printf("could not decode response struct: %v", err)
 					return
 				}
 
-				pending.done <- struct{}{}
-			}
+			pending.done <- struct{}{}
 		}
 	}
 }
@@ -248,11 +246,11 @@ func (c *Conn) keepAlive() {
 			sendBuf, err := io.SerializeWriters(header)
 			if err != nil {
 				log.Printf("error serializing ping request: %v", err)
-				continue
+				return
 			}
 			if _, err = c.conn.Write(sendBuf); err != nil {
 				log.Printf("error writing ping request to net.conn: %v", err)
-				continue
+				return
 			}
 		case <-c.sessionCtx.Done():
 			return
