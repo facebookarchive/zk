@@ -111,6 +111,9 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return fmt.Errorf("unrecognized header type: %d", header.Type)
 		}
 		response := s.ResponseHandler(header.Type)
+		if response == nil {
+			continue
+		}
 
 		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
 			return fmt.Errorf("error serializing response: %w", err)
