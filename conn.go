@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	io2 "io"
 	"log"
 	"math"
 	"net"
@@ -195,7 +196,7 @@ func (c *Conn) handleReads() {
 			return
 		}
 		_, err := dec.ReadInt() // read response length
-		if errors.Is(err, net.ErrClosed) {
+		if errors.Is(err, net.ErrClosed) || errors.Is(err, io2.EOF) {
 			return // don't make further attempts to read from closed connection, close goroutine
 		}
 		if err != nil {
