@@ -14,9 +14,9 @@ import (
 // defaultListenAddress is the default address on which the test server listens.
 const defaultListenAddress = "127.0.0.1:"
 
-// HandlerFunc is the function the server uses to return a response to the client based on the request received.
+// HandlerFunc is the function the server uses to return a response to the client based on the opcode received.
 // Note that custom handlers need to send a ReplyHeader before a response as per the Zookeeper protocol.
-type HandlerFunc func(*proto.RequestHeader) jute.RecordWriter
+type HandlerFunc func(int32) jute.RecordWriter
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -110,16 +110,18 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		default:
 			return fmt.Errorf("unrecognized header type: %d", header.Type)
 		}
-		response := s.ResponseHandler(header)
+		response := s.ResponseHandler(header.Type)
 
-		return serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response)
+		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+			return fmt.Errorf("error serializing response: %w", err)
+		}
 	}
 }
 
-// DefaultHandler returns a default response based on the header received.
-func DefaultHandler(header *proto.RequestHeader) jute.RecordWriter {
+// DefaultHandler returns a default response based on the opcode received.
+func DefaultHandler(opcode int32) jute.RecordWriter {
 	var resp jute.RecordWriter
-	switch header.Type {
+	switch opcode {
 	case io.OpGetData:
 		resp = &proto.GetDataResponse{Data: []byte("test")}
 	case io.OpGetChildren:
