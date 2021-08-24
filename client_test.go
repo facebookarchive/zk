@@ -1,4 +1,4 @@
-package zk
+package zk_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	. "github.com/facebookincubator/zk"
 	"github.com/facebookincubator/zk/testutils"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -65,8 +66,8 @@ func TestClientRetryLogicFails(t *testing.T) {
 	}
 
 	_, err = client.GetChildren(context.Background(), "/")
-	if err == nil || !errors.Is(err, errMaxRetries) {
-		t.Fatalf("expected error: \"%v\", got error: \"%v\"", errMaxRetries, err)
+	if err == nil || !errors.Is(err, ErrMaxRetries) {
+		t.Fatalf("expected error: \"%v\", got error: \"%v\"", ErrMaxRetries, err)
 	}
 }
 
