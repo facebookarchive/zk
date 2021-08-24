@@ -7,12 +7,25 @@ import (
 	"testing"
 
 	"github.com/facebookincubator/zk/testutils"
+
+	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
 const defaultMaxRetries = 5
 
 func TestClientRetryLogic(t *testing.T) {
-	server, err := testutils.NewDefaultServer()
+	failCalls := defaultMaxRetries
+
+	// Create a new handler which will make the test server return an error for a set number of tries.
+	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
+	server, err := testutils.NewServer(func(opcode int32) jute.RecordWriter {
+		if failCalls > 0 {
+			failCalls--
+			return nil // nil response causes error
+		}
+
+		return testutils.DefaultHandler(opcode)
+	})
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
@@ -58,16 +71,31 @@ func TestClientRetryLogicFails(t *testing.T) {
 }
 
 func TestClientContextCanceled(t *testing.T) {
+	calls := 0
+	server, err := testutils.NewServer(func(opcode int32) jute.RecordWriter {
+		calls++
+
+		return testutils.DefaultHandler(opcode)
+	})
+	if err != nil {
+		t.Fatalf("error creating test server: %v", err)
+	}
+
 	client := &Client{
 		MaxRetries: defaultMaxRetries,
-		Network:    "tcp",
+		Ensemble:   server.Addr().String(),
+		Network:    server.Addr().Network(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
 	// expect the client not to retry when ctx is canceled
-	if _, err := client.GetData(ctx, "/"); !errors.Is(err, ctx.Err()) {
+	if _, err = client.GetData(ctx, "/"); !errors.Is(err, ctx.Err()) {
 		t.Fatalf("unexpected error calling GetData: %v", err)
+	}
+	// fail if client attempted retries on canceled ctx
+	if calls > 1 {
+		t.Fatalf("ctx.Err() is non-retryable, expected only 1 call, got %d", calls)
 	}
 }
