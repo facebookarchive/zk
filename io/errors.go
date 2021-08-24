@@ -13,7 +13,7 @@ func (e Error) Error() string {
 		return err
 	}
 
-	return ""
+	return "unknown"
 }
 
 // ref: https://github.com/apache/zookeeper/blob/master/zookeeper-client/zookeeper-client-c/include/zookeeper.h#L94
