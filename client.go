@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// ErrMaxRetries is used to differentiate retryable from non-retryable errors in the client.
 var ErrMaxRetries = errors.New("connection failed after max retries")
 
 // Client represents a Zookeeper client abstraction with additional configuration parameters.
