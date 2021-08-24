@@ -45,26 +45,19 @@ func ReadRecord(dec *jute.BinaryDecoder) (*proto.RequestHeader, jute.RecordReade
 		return nil, nil, fmt.Errorf("error reading RequestHeader: %w", err)
 	}
 
-	req, err := getRecord(header.Type)
-	if err != nil {
-		return nil, nil, fmt.Errorf("unrecognized header type: %w", err)
+	var req jute.RecordReader
+	switch header.Type {
+	case opGetData:
+		req = &proto.GetDataRequest{}
+	case opGetChildren:
+		req = &proto.GetChildrenRequest{}
+	default:
+		return nil, nil, fmt.Errorf("unrecognized header type: %d", header.Type)
 	}
-	if err = dec.ReadRecord(req); err != nil {
+
+	if err := dec.ReadRecord(req); err != nil {
 		return nil, nil, fmt.Errorf("error reading request: %w", err)
 	}
 
 	return header, req, nil
-}
-
-// getRecord returns a jute.RecordReader (typically a request type)
-// based on the opcode received from a request header.
-func getRecord(opcode int32) (jute.RecordReader, error) {
-	switch opcode {
-	case opGetData:
-		return &proto.GetDataRequest{}, nil
-	case opGetChildren:
-		return &proto.GetChildrenRequest{}, nil
-	default:
-		return nil, fmt.Errorf("unrecognized opcode: %d", opcode)
-	}
 }
