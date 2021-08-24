@@ -1,4 +1,4 @@
-package io
+package zk
 
 // Error is a wrapper for all error codes that can be returned by a Zookeeper server.
 type Error struct {

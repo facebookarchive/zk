@@ -149,8 +149,8 @@ func TestErrorCodeHandling(t *testing.T) {
 	_, err = conn.GetChildren("/nonexisting")
 
 	// verify that the ZK server error has been processed properly
-	var ioError *zkio.Error
-	if !errors.As(err, &ioError) {
+	var zkError *Error
+	if !errors.As(err, &zkError) {
 		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
 }
