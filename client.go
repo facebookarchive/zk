@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-
-	"github.com/facebookincubator/zk/io"
 )
 
 var errMaxRetries = errors.New("connection failed after max retries")
@@ -68,11 +66,6 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 		}
 
 		err = fun()
-
-		var ioError *io.Error
-		if errors.As(err, &ioError) {
-			return fmt.Errorf("ZK server returned error: %w", err) // server errors are non-retryable
-		}
 		if err != nil {
 			continue // retry
 		}
