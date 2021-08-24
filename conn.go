@@ -217,17 +217,20 @@ func (c *Conn) handleReads() {
 		}
 
 		value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
-		if ok {
-			pending := value.(*pendingRequest)
-			if replyHeader.Err != 0 {
-				pending.error = &io.Error{Code: io.Code(replyHeader.Err)}
-			} else if err = dec.ReadRecord(pending.reply); err != nil {
-				log.Printf("could not decode response struct: %v", err)
-				return
-			}
-
-			pending.done <- struct{}{}
+		if !ok {
+			log.Printf("no matching reply found for xid %d", replyHeader.Xid)
+			continue
 		}
+
+		pending := value.(*pendingRequest)
+		if replyHeader.Err != 0 {
+			pending.error = &io.Error{Code: io.Code(replyHeader.Err)}
+		} else if err = dec.ReadRecord(pending.reply); err != nil {
+			log.Printf("could not decode response struct: %v", err)
+			return
+		}
+
+		pending.done <- struct{}{}
 	}
 }
 
