@@ -215,7 +215,7 @@ func (c *Conn) handleReads() {
 
 		value, ok := c.reqs.LoadAndDelete(replyHeader.Xid)
 		if !ok {
-			log.Printf("no matching reply found for xid %d", replyHeader.Xid)
+			log.Printf("no matching request found for xid %d", replyHeader.Xid)
 			continue
 		}
 
