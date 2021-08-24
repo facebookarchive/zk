@@ -96,15 +96,8 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return fmt.Errorf("error reading request length: %w", err)
 		}
 		header := &proto.RequestHeader{}
-		if err := dec.ReadRecord(header); err != nil {
-			return fmt.Errorf("error reading RequestHeader: %w", err)
-		}
-
-		req, err := zk.GetRecord(header.Type)
+		req, err := zk.ReadRecord(dec, header)
 		if err != nil {
-			return fmt.Errorf("unrecognized header type: %w", err)
-		}
-		if err = dec.ReadRecord(req); err != nil {
 			return fmt.Errorf("error reading request: %w", err)
 		}
 
