@@ -36,7 +36,7 @@ type Conn struct {
 type pendingRequest struct {
 	reply jute.RecordReader
 	done  chan struct{}
-	error *io.Error
+	error error
 }
 
 // isAlive() checks the TCP connection is alive by reading from the sessionCtx channel.
@@ -180,10 +180,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 
 	select {
 	case <-pending.done:
-		if pending.error != nil {
-			return fmt.Errorf("zk server returned error code: %w", pending.error)
-		}
-		return nil
+		return pending.error
 	case <-c.sessionCtx.Done():
 		return fmt.Errorf("session closed: %w", c.sessionCtx.Err())
 	case <-time.After(c.sessionTimeout):
