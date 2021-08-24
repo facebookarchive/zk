@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/integration"
-	zk_io "github.com/facebookincubator/zk/io"
+	zkio "github.com/facebookincubator/zk/io"
 	"github.com/facebookincubator/zk/testutils"
 )
 
@@ -177,7 +177,7 @@ func TestErrorCodeHandling(t *testing.T) {
 	_, err = conn.GetChildren("/nonexisting")
 
 	// verify that the ZK server error has been processed properly
-	var ioError *zk_io.Error
+	var ioError *zkio.Error
 	if !errors.As(err, &ioError) {
 		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
