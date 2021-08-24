@@ -37,7 +37,7 @@ func SerializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 }
 
 // ReadRecord reads the request header and body depending on the opcode.
-// It returns the serialized request or an error if it occurs.
+// It returns the serialized request header and body, or an error if it occurs.
 func ReadRecord(dec *jute.BinaryDecoder) (*proto.RequestHeader, jute.RecordReader, error) {
 	header := &proto.RequestHeader{}
 
