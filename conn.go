@@ -207,7 +207,7 @@ func (c *Conn) handleReads() {
 			log.Printf("could not decode response struct: %v", err)
 			return
 		}
-		if replyHeader.Xid == PingXID {
+		if replyHeader.Xid == pingXID {
 			continue // ignore ping responses
 		}
 
@@ -234,8 +234,8 @@ func (c *Conn) keepAlive() {
 		select {
 		case <-pingTicker.C:
 			header := &proto.RequestHeader{
-				Xid:  PingXID,
-				Type: OpPing,
+				Xid:  pingXID,
+				Type: opPing,
 			}
 			sendBuf, err := SerializeWriters(header)
 			if err != nil {
