@@ -137,7 +137,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	request := &proto.GetDataRequest{Path: path}
 	response := &proto.GetDataResponse{}
 
-	if err := c.rpc(OpGetData, request, response); err != nil {
+	if err := c.rpc(opGetData, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetData request: %w", err)
 	}
 
@@ -149,7 +149,7 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 	request := &proto.GetChildrenRequest{Path: path}
 	response := &proto.GetChildrenResponse{}
 
-	if err := c.rpc(OpGetChildren, request, response); err != nil {
+	if err := c.rpc(opGetChildren, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetChildren request: %w", err)
 	}
 

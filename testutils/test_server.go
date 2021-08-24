@@ -15,9 +15,9 @@ import (
 // defaultListenAddress is the default address on which the test server listens.
 const defaultListenAddress = "127.0.0.1:"
 
-// HandlerFunc is the function the server uses to return a response to the client based on the opcode received.
+// HandlerFunc is the function the server uses to return a response to the client based on the request received.
 // Note that custom handlers need to send a ReplyHeader before a response as per the Zookeeper protocol.
-type HandlerFunc func(int32) jute.RecordWriter
+type HandlerFunc func(reader jute.RecordReader) jute.RecordWriter
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -99,19 +99,16 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		if err := dec.ReadRecord(header); err != nil {
 			return fmt.Errorf("error reading RequestHeader: %w", err)
 		}
-		switch header.Type {
-		case zk.OpGetData:
-			if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
-				return fmt.Errorf("error reading GetDataRequest: %w", err)
-			}
-		case zk.OpGetChildren:
-			if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
-				return fmt.Errorf("error reading GetChildrenRequest: %w", err)
-			}
-		default:
-			return fmt.Errorf("unrecognized header type: %d", header.Type)
+
+		req, err := zk.GetRecord(header.Type)
+		if err != nil {
+			return fmt.Errorf("unrecognized header type: %w", err)
 		}
-		response := s.ResponseHandler(header.Type)
+		if err = dec.ReadRecord(req); err != nil {
+			return fmt.Errorf("error reading request: %w", err)
+		}
+
+		response := s.ResponseHandler(req)
 		if response == nil {
 			return errors.New("handler returned nil response")
 		}
@@ -123,16 +120,15 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 }
 
 // DefaultHandler returns a default response based on the opcode received.
-func DefaultHandler(opcode int32) jute.RecordWriter {
-	var resp jute.RecordWriter
-	switch opcode {
-	case zk.OpGetData:
-		resp = &proto.GetDataResponse{Data: []byte("test")}
-	case zk.OpGetChildren:
-		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
+func DefaultHandler(request jute.RecordReader) jute.RecordWriter {
+	switch request.(type) {
+	case *proto.GetDataRequest:
+		return &proto.GetDataResponse{Data: []byte("test")}
+	case *proto.GetChildrenRequest:
+		return &proto.GetChildrenResponse{Children: []string{"test"}}
+	default:
+		return nil
 	}
-
-	return resp
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {

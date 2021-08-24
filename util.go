@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/facebookincubator/zk/internal/proto"
+
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
@@ -32,4 +34,17 @@ func SerializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 	}
 
 	return sendBuf.Bytes(), nil
+}
+
+// GetRecord returns a jute.RecordReader (typically a request type)
+// based on the opcode received from a request header.
+func GetRecord(opcode int32) (jute.RecordReader, error) {
+	switch opcode {
+	case opGetData:
+		return &proto.GetDataRequest{}, nil
+	case opGetChildren:
+		return &proto.GetChildrenRequest{}, nil
+	default:
+		return nil, fmt.Errorf("unrecognized opcode: %d", opcode)
+	}
 }
