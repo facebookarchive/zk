@@ -6,8 +6,8 @@ import (
 	"log"
 	"net"
 
+	"github.com/facebookincubator/zk"
 	"github.com/facebookincubator/zk/internal/proto"
-	"github.com/facebookincubator/zk/io"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -100,11 +100,11 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return fmt.Errorf("error reading RequestHeader: %w", err)
 		}
 		switch header.Type {
-		case io.OpGetData:
+		case zk.OpGetData:
 			if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
 				return fmt.Errorf("error reading GetDataRequest: %w", err)
 			}
-		case io.OpGetChildren:
+		case zk.OpGetChildren:
 			if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
 				return fmt.Errorf("error reading GetChildrenRequest: %w", err)
 			}
@@ -126,9 +126,9 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 func DefaultHandler(opcode int32) jute.RecordWriter {
 	var resp jute.RecordWriter
 	switch opcode {
-	case io.OpGetData:
+	case zk.OpGetData:
 		resp = &proto.GetDataResponse{Data: []byte("test")}
-	case io.OpGetChildren:
+	case zk.OpGetChildren:
 		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 	}
 
@@ -136,7 +136,7 @@ func DefaultHandler(opcode int32) jute.RecordWriter {
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
-	sendBuf, err := io.SerializeWriters(resp...)
+	sendBuf, err := zk.SerializeWriters(resp...)
 	if err != nil {
 		return fmt.Errorf("reply serialization error: %w", err)
 	}
