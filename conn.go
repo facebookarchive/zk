@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/facebookincubator/zk/internal/proto"
-	"github.com/facebookincubator/zk/io"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -102,7 +101,7 @@ func (c *Conn) authenticate() error {
 		TimeOut: int32(c.sessionTimeout.Milliseconds()),
 	}
 
-	sendBuf, err := io.SerializeWriters(request)
+	sendBuf, err := SerializeWriters(request)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
@@ -136,7 +135,7 @@ func (c *Conn) GetData(path string) ([]byte, error) {
 	request := &proto.GetDataRequest{Path: path}
 	response := &proto.GetDataResponse{}
 
-	if err := c.rpc(io.OpGetData, request, response); err != nil {
+	if err := c.rpc(OpGetData, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetData request: %w", err)
 	}
 
@@ -148,7 +147,7 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 	request := &proto.GetChildrenRequest{Path: path}
 	response := &proto.GetChildrenResponse{}
 
-	if err := c.rpc(io.OpGetChildren, request, response); err != nil {
+	if err := c.rpc(OpGetChildren, request, response); err != nil {
 		return nil, fmt.Errorf("error sending GetChildren request: %w", err)
 	}
 
@@ -161,7 +160,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 		Type: opcode,
 	}
 
-	sendBuf, err := io.SerializeWriters(header, w)
+	sendBuf, err := SerializeWriters(header, w)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
@@ -208,7 +207,7 @@ func (c *Conn) handleReads() {
 			log.Printf("could not decode response struct: %v", err)
 			return
 		}
-		if replyHeader.Xid == io.PingXID {
+		if replyHeader.Xid == PingXID {
 			continue // ignore ping responses
 		}
 
@@ -235,10 +234,10 @@ func (c *Conn) keepAlive() {
 		select {
 		case <-pingTicker.C:
 			header := &proto.RequestHeader{
-				Xid:  io.PingXID,
-				Type: io.OpPing,
+				Xid:  PingXID,
+				Type: OpPing,
 			}
-			sendBuf, err := io.SerializeWriters(header)
+			sendBuf, err := SerializeWriters(header)
 			if err != nil {
 				log.Printf("error serializing ping request: %v", err)
 				return

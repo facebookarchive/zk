@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var errMaxRetries = errors.New("connection failed after max retries")
+var ErrMaxRetries = errors.New("connection failed after max retries")
 
 // Client represents a Zookeeper client abstraction with additional configuration parameters.
 type Client struct {
@@ -73,7 +73,7 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 		return nil
 	}
 
-	return fmt.Errorf("%w (%d): %v", errMaxRetries, client.MaxRetries, err)
+	return fmt.Errorf("%w (%d): %v", ErrMaxRetries, client.MaxRetries, err)
 }
 
 // getConn initializes client connection or reuses it if it has already been established.

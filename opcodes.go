@@ -1,4 +1,4 @@
-package io
+package zk
 
 // PingXID represents the XID which is used in ping/keepalive packet headers.
 const PingXID = -2
