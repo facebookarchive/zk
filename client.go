@@ -67,6 +67,12 @@ func (client *Client) doRetry(ctx context.Context, fun func() error) error {
 		}
 
 		err = fun()
+		// check if we have encountered a server-side error before retrying
+		var ioError *Error
+		if errors.As(err, &ioError) {
+			return fmt.Errorf("ZK server returned error: %w", err) // server errors are non-retryable
+		}
+
 		if err != nil {
 			continue // retry
 		}

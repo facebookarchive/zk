@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	. "github.com/facebookincubator/zk"
+	"github.com/facebookincubator/zk/integration"
 	"github.com/facebookincubator/zk/testutils"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -98,5 +99,36 @@ func TestClientContextCanceled(t *testing.T) {
 	// fail if client attempted retries on canceled ctx
 	if calls > 1 {
 		t.Fatalf("ctx.Err() is non-retryable, expected only 1 call, got %d", calls)
+	}
+}
+
+func TestClientErrorCodeHandling(t *testing.T) {
+	server, err := integration.NewZKServer("3.6.2", integration.DefaultConfig())
+	if err != nil {
+		t.Fatalf("unexpected error while initializing zk server: %v", err)
+	}
+	defer func(server *integration.ZKServer) {
+		if err = server.Shutdown(); err != nil {
+			t.Fatalf("unexpected error while shutting down zk server: %v", err)
+		}
+	}(server)
+	if err = server.Run(); err != nil {
+		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
+		return
+	}
+
+	client := &Client{
+		MaxRetries: defaultMaxRetries,
+		Network:    "tcp",
+		Ensemble:   "127.0.0.1:2181",
+	}
+
+	// attempt to access node that does not exist
+	_, err = client.GetChildren(context.Background(), "/nonexisting")
+
+	// verify that the ZK server error has been processed properly and had no retries
+	var ioError *Error
+	if errors.Is(err, ErrMaxRetries) || !errors.As(err, &ioError) {
+		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
 }
