@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	. "github.com/facebookincubator/zk"
-	. "github.com/facebookincubator/zk/testutils"
+	"github.com/facebookincubator/zk/testutils"
 )
 
 func TestGetDataSimple(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping local ZK mock tests for CI")
 	}
-	server, err := NewDefaultServer()
+	server, err := testutils.NewDefaultServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}

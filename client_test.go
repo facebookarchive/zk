@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	. "github.com/facebookincubator/zk"
-	. "github.com/facebookincubator/zk/testutils"
+	"github.com/facebookincubator/zk/testutils"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
@@ -19,13 +19,13 @@ func TestClientRetryLogic(t *testing.T) {
 
 	// Create a new handler which will make the test server return an error for a set number of tries.
 	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
-	server, err := NewServer(func(opcode int32) jute.RecordWriter {
+	server, err := testutils.NewServer(func(opcode int32) jute.RecordWriter {
 		if failCalls > 0 {
 			failCalls--
 			return nil // nil response causes error
 		}
 
-		return DefaultHandler(opcode)
+		return testutils.DefaultHandler(opcode)
 	})
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
@@ -49,7 +49,7 @@ func TestClientRetryLogic(t *testing.T) {
 }
 
 func TestClientRetryLogicFails(t *testing.T) {
-	server, err := NewDefaultServer()
+	server, err := testutils.NewDefaultServer()
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
 	}
@@ -73,10 +73,10 @@ func TestClientRetryLogicFails(t *testing.T) {
 
 func TestClientContextCanceled(t *testing.T) {
 	calls := 0
-	server, err := NewServer(func(opcode int32) jute.RecordWriter {
+	server, err := testutils.NewServer(func(opcode int32) jute.RecordWriter {
 		calls++
 
-		return DefaultHandler(opcode)
+		return testutils.DefaultHandler(opcode)
 	})
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)
