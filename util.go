@@ -38,20 +38,22 @@ func SerializeWriters(generated ...jute.RecordWriter) ([]byte, error) {
 
 // ReadRecord reads the request header and body depending on the opcode.
 // It returns the serialized request or an error if it occurs.
-func ReadRecord(dec *jute.BinaryDecoder, header *proto.RequestHeader) (jute.RecordReader, error) {
+func ReadRecord(dec *jute.BinaryDecoder) (*proto.RequestHeader, jute.RecordReader, error) {
+	header := &proto.RequestHeader{}
+
 	if err := dec.ReadRecord(header); err != nil {
-		return nil, fmt.Errorf("error reading RequestHeader: %w", err)
+		return nil, nil, fmt.Errorf("error reading RequestHeader: %w", err)
 	}
 
 	req, err := getRecord(header.Type)
 	if err != nil {
-		return nil, fmt.Errorf("unrecognized header type: %w", err)
+		return nil, nil, fmt.Errorf("unrecognized header type: %w", err)
 	}
 	if err = dec.ReadRecord(req); err != nil {
-		return nil, fmt.Errorf("error reading request: %w", err)
+		return nil, nil, fmt.Errorf("error reading request: %w", err)
 	}
 
-	return req, nil
+	return header, req, nil
 }
 
 // getRecord returns a jute.RecordReader (typically a request type)

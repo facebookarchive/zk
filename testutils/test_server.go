@@ -95,8 +95,7 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		if _, err := dec.ReadInt(); err != nil {
 			return fmt.Errorf("error reading request length: %w", err)
 		}
-		header := &proto.RequestHeader{}
-		req, err := zk.ReadRecord(dec, header)
+		header, req, err := zk.ReadRecord(dec)
 		if err != nil {
 			return fmt.Errorf("error reading request: %w", err)
 		}
@@ -106,7 +105,7 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return errors.New("handler returned nil response")
 		}
 
-		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
 			return fmt.Errorf("error serializing response: %w", err)
 		}
 	}
@@ -114,14 +113,15 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 
 // DefaultHandler returns a default response based on the opcode received.
 func DefaultHandler(request jute.RecordReader) jute.RecordWriter {
+	var resp jute.RecordWriter
 	switch request.(type) {
 	case *proto.GetDataRequest:
-		return &proto.GetDataResponse{Data: []byte("test")}
+		resp = &proto.GetDataResponse{Data: []byte("test")}
 	case *proto.GetChildrenRequest:
-		return &proto.GetChildrenResponse{Children: []string{"test"}}
-	default:
-		return nil
+		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 	}
+
+	return resp
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
