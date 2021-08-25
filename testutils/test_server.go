@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -99,6 +100,9 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 
 		errCode, response := s.ResponseHandler(req)
 		send := []jute.RecordWriter{&proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}}
+		if response == nil && errCode == 0 {
+			return errors.New("handler returned nil response")
+		}
 		if errCode == 0 {
 			send = append(send, response)
 		}
