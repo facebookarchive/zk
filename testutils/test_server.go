@@ -99,7 +99,7 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 
 		errCode, response := s.ResponseHandler(req)
 		send := []jute.RecordWriter{&proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}}
-		if errCode == 0 && response != nil {
+		if errCode == 0 {
 			send = append(send, response)
 		}
 

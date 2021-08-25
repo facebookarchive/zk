@@ -2,6 +2,7 @@ package zk
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net"
 
@@ -17,6 +18,9 @@ func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
 	enc := jute.NewBinaryEncoder(sendBuf)
 
 	for _, generatedStruct := range generated {
+		if generatedStruct == nil {
+			return errors.New("cannot encode nil struct")
+		}
 		if err := generatedStruct.Write(enc); err != nil {
 			return fmt.Errorf("could not encode struct: %w", err)
 		}
