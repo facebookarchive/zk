@@ -210,7 +210,8 @@ func (c *Conn) handleReads() {
 
 		pending := value.(*pendingRequest)
 		if replyHeader.Err != 0 {
-			pending.error = &Error{Code: Code(replyHeader.Err)}
+			code := Error(replyHeader.Err)
+			pending.error = &code
 		} else if err = dec.ReadRecord(pending.reply); err != nil {
 			log.Printf("could not decode response struct: %v", err)
 			return
