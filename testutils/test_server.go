@@ -103,8 +103,13 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return errors.New("handler returned nil response")
 		}
 
-		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}, response); err != nil {
-			return fmt.Errorf("error serializing response: %w", err)
+		if errCode != 0 {
+			if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}); err != nil {
+				return fmt.Errorf("error sending response: %w", err)
+			}
+		}
+		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+			return fmt.Errorf("error sending response: %w", err)
 		}
 	}
 }
