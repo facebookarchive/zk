@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	. "github.com/facebookincubator/zk"
-	"github.com/facebookincubator/zk/integration"
+	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/testutils"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -20,10 +20,10 @@ func TestClientRetryLogic(t *testing.T) {
 
 	// Create a new handler which will make the test server return an error for a set number of tries.
 	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
-	server, err := testutils.NewServer(func(req jute.RecordReader) jute.RecordWriter {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, int32) {
 		if failCalls > 0 {
 			failCalls--
-			return nil // nil response causes error
+			return nil, 0 // nil response causes retryable error
 		}
 
 		return testutils.DefaultHandler(req)
@@ -74,7 +74,7 @@ func TestClientRetryLogicFails(t *testing.T) {
 
 func TestClientContextCanceled(t *testing.T) {
 	calls := 0
-	server, err := testutils.NewServer(func(req jute.RecordReader) jute.RecordWriter {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, int32) {
 		calls++
 
 		return testutils.DefaultHandler(req)
@@ -103,28 +103,21 @@ func TestClientContextCanceled(t *testing.T) {
 }
 
 func TestClientErrorCodeHandling(t *testing.T) {
-	server, err := integration.NewZKServer("3.6.2", integration.DefaultConfig())
+	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, int32) {
+		// return error code, which the client should interpret as a non-retryable server-side error
+		return &proto.GetChildrenResponse{}, -1
+	})
 	if err != nil {
-		t.Fatalf("unexpected error while initializing zk server: %v", err)
-	}
-	defer func(server *integration.ZKServer) {
-		if err = server.Shutdown(); err != nil {
-			t.Fatalf("unexpected error while shutting down zk server: %v", err)
-		}
-	}(server)
-	if err = server.Run(); err != nil {
-		t.Fatalf("unexpected error while calling RunZookeeperServer: %s", err)
-		return
+		t.Fatalf("error creating test server: %v", err)
 	}
 
 	client := &Client{
 		MaxRetries: defaultMaxRetries,
-		Network:    "tcp",
-		Ensemble:   "127.0.0.1:2181",
+		Ensemble:   server.Addr().String(),
+		Network:    server.Addr().Network(),
 	}
 
-	// attempt to access node that does not exist
-	_, err = client.GetChildren(context.Background(), "/nonexisting")
+	_, err = client.GetChildren(context.Background(), "/")
 
 	// verify that the ZK server error has been processed properly and had no retries
 	var ioError *Error
