@@ -1,9 +1,9 @@
 package zk
 
-// Code is an error code returned in a ReplyHeader by a Zookeeper server.
-type Code int32
+// Error is an error code returned in a ReplyHeader by a Zookeeper server.
+type Error int32
 
-func (c Code) Error() string {
+func (c Error) Error() string {
 	if err, ok := errToString[c]; ok {
 		return err
 	}
@@ -28,29 +28,29 @@ const (
 	errSSL           = -15
 
 	// API errors
-	errAPI        Code = -100
-	errNoNode     Code = -101
-	errNoAuth     Code = -102
-	errBadVersion Code = -103
-	errNoChildren Code = -108
-	errNodeExists Code = -110
-	errNotEmpty   Code = -111
-	errExpired    Code = -112
-	errCallback   Code = -113
-	errInvalidACL Code = -114
-	errAuthFailed Code = -115
-	errClosing    Code = -116
-	errNothing    Code = -117
-	errMoved      Code = -118
-	errReadOnly   Code = -119
-	errEphLocal   Code = -120
-	errNoWatcher  Code = -121
-	errReconfig   Code = -123
-	errAuthScheme Code = -124
-	errThrottled  Code = -127
+	errAPI        Error = -100
+	errNoNode     Error = -101
+	errNoAuth     Error = -102
+	errBadVersion Error = -103
+	errNoChildren Error = -108
+	errNodeExists Error = -110
+	errNotEmpty   Error = -111
+	errExpired    Error = -112
+	errCallback   Error = -113
+	errInvalidACL Error = -114
+	errAuthFailed Error = -115
+	errClosing    Error = -116
+	errNothing    Error = -117
+	errMoved      Error = -118
+	errReadOnly   Error = -119
+	errEphLocal   Error = -120
+	errNoWatcher  Error = -121
+	errReconfig   Error = -123
+	errAuthScheme Error = -124
+	errThrottled  Error = -127
 )
 
-var errToString = map[Code]string{
+var errToString = map[Error]string{
 	errSys:           "system error",
 	errRuntime:       "runtime inconsistency found",
 	errData:          "data inconsistency found",
