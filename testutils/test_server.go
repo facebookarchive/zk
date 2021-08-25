@@ -103,9 +103,7 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			send = append(send, response)
 		}
 
-		if err = serializeAndSend(conn, send...); err != nil {
-			return fmt.Errorf("error sending response: %w", err)
-		if err = zk.WriteRecords(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+		if err = zk.WriteRecords(conn, send...); err != nil {
 			return fmt.Errorf("error writing response: %w", err)
 		}
 	}
