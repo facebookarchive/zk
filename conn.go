@@ -164,7 +164,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 	c.reqs.Store(header.Xid, pending)
 
 	if err := WriteRecords(c.conn, header, w); err != nil {
-		return fmt.Errorf("error serializing request: %w", err)
+		return fmt.Errorf("error writing request: %w", err)
 	}
 
 	select {
@@ -235,7 +235,7 @@ func (c *Conn) keepAlive() {
 			}
 
 			if err := WriteRecords(c.conn, header); err != nil {
-				log.Printf("error serializing ping request: %v", err)
+				log.Printf("error writing ping request: %v", err)
 				return
 			}
 		case <-c.sessionCtx.Done():
