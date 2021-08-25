@@ -1,7 +1,6 @@
 package testutils
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -99,16 +98,12 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		}
 
 		response, errCode := s.ResponseHandler(req)
-		if errCode != 0 {
-			if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}); err != nil {
-				return fmt.Errorf("error sending response: %w", err)
-			}
-		}
-		if response == nil {
-			return errors.New("handler returned nil response")
+		send := []jute.RecordWriter{&proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}}
+		if errCode == 0 && response != nil {
+			send = append(send, response)
 		}
 
-		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+		if err = serializeAndSend(conn, send...); err != nil {
 			return fmt.Errorf("error sending response: %w", err)
 		}
 	}
