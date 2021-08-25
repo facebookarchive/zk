@@ -104,7 +104,7 @@ func (c *Conn) authenticate() error {
 	}
 
 	if err := WriteRecords(c.conn, request); err != nil {
-		return fmt.Errorf("error serializing request: %w", err)
+		return fmt.Errorf("error writing authentication request: %w", err)
 	}
 
 	// receive bytes from same socket, reading the message length first
