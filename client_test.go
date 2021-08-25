@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	. "github.com/facebookincubator/zk"
-	"github.com/facebookincubator/zk/internal/proto"
 	"github.com/facebookincubator/zk/testutils"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
@@ -105,7 +104,7 @@ func TestClientContextCanceled(t *testing.T) {
 func TestClientErrorCodeHandling(t *testing.T) {
 	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, Code) {
 		// return error code, which the client should interpret as a non-retryable server-side error
-		return &proto.GetChildrenResponse{}, -1
+		return nil, -1
 	})
 	if err != nil {
 		t.Fatalf("error creating test server: %v", err)

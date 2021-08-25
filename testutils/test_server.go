@@ -99,15 +99,15 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		}
 
 		response, errCode := s.ResponseHandler(req)
-		if response == nil {
-			return errors.New("handler returned nil response")
-		}
-
 		if errCode != 0 {
 			if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}); err != nil {
 				return fmt.Errorf("error sending response: %w", err)
 			}
 		}
+		if response == nil {
+			return errors.New("handler returned nil response")
+		}
+
 		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
 			return fmt.Errorf("error sending response: %w", err)
 		}
