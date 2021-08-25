@@ -15,9 +15,9 @@ import (
 // defaultListenAddress is the default address on which the test server listens.
 const defaultListenAddress = "127.0.0.1:"
 
-// HandlerFunc is the function the server uses to return a response to the client based on the opcode received.
+// HandlerFunc is the function the server uses to return a response to the client based on the request received.
 // Note that custom handlers need to send a ReplyHeader before a response as per the Zookeeper protocol.
-type HandlerFunc func(int32) jute.RecordWriter
+type HandlerFunc func(reader jute.RecordReader) jute.RecordWriter
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -92,43 +92,29 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 
 	dec := jute.NewBinaryDecoder(conn)
 	for {
-		if _, err := dec.ReadInt(); err != nil {
-			return fmt.Errorf("error reading request length: %w", err)
+		header, req, err := zk.ReadRecord(dec)
+		if err != nil {
+			return fmt.Errorf("error reading request: %w", err)
 		}
-		header := &proto.RequestHeader{}
-		if err := dec.ReadRecord(header); err != nil {
-			return fmt.Errorf("error reading RequestHeader: %w", err)
-		}
-		switch header.Type {
-		case zk.OpGetData:
-			if err := dec.ReadRecord(&proto.GetDataRequest{}); err != nil {
-				return fmt.Errorf("error reading GetDataRequest: %w", err)
-			}
-		case zk.OpGetChildren:
-			if err := dec.ReadRecord(&proto.GetChildrenRequest{}); err != nil {
-				return fmt.Errorf("error reading GetChildrenRequest: %w", err)
-			}
-		default:
-			return fmt.Errorf("unrecognized header type: %d", header.Type)
-		}
-		response := s.ResponseHandler(header.Type)
+
+		response := s.ResponseHandler(req)
 		if response == nil {
 			return errors.New("handler returned nil response")
 		}
 
-		if err := serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
 			return fmt.Errorf("error serializing response: %w", err)
 		}
 	}
 }
 
 // DefaultHandler returns a default response based on the opcode received.
-func DefaultHandler(opcode int32) jute.RecordWriter {
+func DefaultHandler(request jute.RecordReader) jute.RecordWriter {
 	var resp jute.RecordWriter
-	switch opcode {
-	case zk.OpGetData:
+	switch request.(type) {
+	case *proto.GetDataRequest:
 		resp = &proto.GetDataResponse{Data: []byte("test")}
-	case zk.OpGetChildren:
+	case *proto.GetChildrenRequest:
 		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 	}
 
@@ -136,7 +122,7 @@ func DefaultHandler(opcode int32) jute.RecordWriter {
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
-	sendBuf, err := zk.SerializeWriters(resp...)
+	sendBuf, err := zk.WriteRecords(resp...)
 	if err != nil {
 		return fmt.Errorf("reply serialization error: %w", err)
 	}
