@@ -103,7 +103,7 @@ func (c *Conn) authenticate() error {
 		TimeOut: int32(c.sessionTimeout.Milliseconds()),
 	}
 
-	sendBuf, err := SerializeWriters(request)
+	sendBuf, err := WriteRecords(request)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
@@ -162,7 +162,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 		Type: opcode,
 	}
 
-	sendBuf, err := SerializeWriters(header, w)
+	sendBuf, err := WriteRecords(header, w)
 	if err != nil {
 		return fmt.Errorf("error serializing request: %v", err)
 	}
@@ -244,7 +244,7 @@ func (c *Conn) keepAlive() {
 				Xid:  pingXID,
 				Type: opPing,
 			}
-			sendBuf, err := SerializeWriters(header)
+			sendBuf, err := WriteRecords(header)
 			if err != nil {
 				log.Printf("error serializing ping request: %v", err)
 				return

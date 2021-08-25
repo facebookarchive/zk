@@ -92,9 +92,6 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 
 	dec := jute.NewBinaryDecoder(conn)
 	for {
-		if _, err := dec.ReadInt(); err != nil {
-			return fmt.Errorf("error reading request length: %w", err)
-		}
 		header, req, err := zk.ReadRecord(dec)
 		if err != nil {
 			return fmt.Errorf("error reading request: %w", err)
@@ -125,7 +122,7 @@ func DefaultHandler(request jute.RecordReader) jute.RecordWriter {
 }
 
 func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
-	sendBuf, err := zk.SerializeWriters(resp...)
+	sendBuf, err := zk.WriteRecords(resp...)
 	if err != nil {
 		return fmt.Errorf("reply serialization error: %w", err)
 	}
