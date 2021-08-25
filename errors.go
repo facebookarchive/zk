@@ -1,15 +1,10 @@
 package zk
 
-// Error is a wrapper for all error codes that can be returned by a Zookeeper server.
-type Error struct {
-	Code Code
-}
-
 // Code is an error code returned in a ReplyHeader by a Zookeeper server.
 type Code int32
 
-func (e Error) Error() string {
-	if err, ok := errToString[e.Code]; ok {
+func (c Code) Error() string {
+	if err, ok := errToString[c]; ok {
 		return err
 	}
 

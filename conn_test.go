@@ -149,7 +149,7 @@ func TestErrorCodeHandling(t *testing.T) {
 	_, err = conn.GetChildren("/nonexisting")
 
 	// verify that the ZK server error has been processed properly
-	var zkError *Error
+	var zkError *Code
 	if !errors.As(err, &zkError) {
 		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
