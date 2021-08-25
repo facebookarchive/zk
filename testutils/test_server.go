@@ -86,7 +86,7 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		return fmt.Errorf("error reading ConnectRequest: %w", err)
 	}
 
-	if err := serializeAndSend(conn, &proto.ConnectResponse{}); err != nil {
+	if err := zk.WriteRecords(conn, &proto.ConnectResponse{}); err != nil {
 		return fmt.Errorf("error sending ConnectResponse: %w", err)
 	}
 
@@ -105,6 +105,8 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 
 		if err = serializeAndSend(conn, send...); err != nil {
 			return fmt.Errorf("error sending response: %w", err)
+		if err = zk.WriteRecords(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+			return fmt.Errorf("error writing response: %w", err)
 		}
 	}
 }
@@ -120,16 +122,4 @@ func DefaultHandler(request jute.RecordReader) (zk.Code, jute.RecordWriter) {
 	}
 
 	return 0, resp
-}
-
-func serializeAndSend(conn net.Conn, resp ...jute.RecordWriter) error {
-	sendBuf, err := zk.WriteRecords(resp...)
-	if err != nil {
-		return fmt.Errorf("reply serialization error: %w", err)
-	}
-	if _, err = conn.Write(sendBuf); err != nil {
-		return fmt.Errorf("reply write error: %w", err)
-	}
-
-	return nil
 }

@@ -3,21 +3,22 @@ package zk
 import (
 	"bytes"
 	"fmt"
+	"net"
 
 	"github.com/facebookincubator/zk/internal/proto"
 
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
-// WriteRecords takes in one or more RecordWriter instances, and serializes them to a byte array
-// while also prepending the total length of the structures to the beginning of the array.
-func WriteRecords(generated ...jute.RecordWriter) ([]byte, error) {
+// WriteRecords takes in one or more RecordWriter instances, serializes them to a byte array
+// and writes them to the provided net.Conn.
+func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
 	sendBuf := &bytes.Buffer{}
 	enc := jute.NewBinaryEncoder(sendBuf)
 
 	for _, generatedStruct := range generated {
 		if err := generatedStruct.Write(enc); err != nil {
-			return nil, fmt.Errorf("could not encode struct: %v", err)
+			return fmt.Errorf("could not encode struct: %w", err)
 		}
 	}
 	// copy encoded request bytes
@@ -27,13 +28,17 @@ func WriteRecords(generated ...jute.RecordWriter) ([]byte, error) {
 	sendBuf.Reset()
 
 	if err := enc.WriteBuffer(requestBytes); err != nil {
-		return nil, err
+		return fmt.Errorf("could not write buffer: %w", err)
 	}
 	if err := enc.WriteEnd(); err != nil {
-		return nil, err
+		return fmt.Errorf("could not write buffer: %w", err)
 	}
 
-	return sendBuf.Bytes(), nil
+	if _, err := conn.Write(sendBuf.Bytes()); err != nil {
+		return fmt.Errorf("error writing to net.conn: %w", err)
+	}
+
+	return nil
 }
 
 // ReadRecord reads the request header and body depending on the opcode.

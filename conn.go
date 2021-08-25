@@ -103,26 +103,20 @@ func (c *Conn) authenticate() error {
 		TimeOut: int32(c.sessionTimeout.Milliseconds()),
 	}
 
-	sendBuf, err := WriteRecords(request)
-	if err != nil {
-		return fmt.Errorf("error serializing request: %v", err)
-	}
-
-	// send request payload via net.conn
-	if _, err = c.conn.Write(sendBuf); err != nil {
-		return fmt.Errorf("error writing authentication request to net.conn: %v", err)
+	if err := WriteRecords(c.conn, request); err != nil {
+		return fmt.Errorf("error writing authentication request: %w", err)
 	}
 
 	// receive bytes from same socket, reading the message length first
 	dec := jute.NewBinaryDecoder(c.conn)
 
-	_, err = dec.ReadInt() // read response length
-	if err != nil {
-		return fmt.Errorf("could not decode response length: %v", err)
+	// read response length
+	if _, err := dec.ReadInt(); err != nil {
+		return fmt.Errorf("could not decode response length: %w", err)
 	}
 	response := proto.ConnectResponse{}
-	if err = response.Read(dec); err != nil {
-		return fmt.Errorf("could not decode response struct: %v", err)
+	if err := response.Read(dec); err != nil {
+		return fmt.Errorf("could not decode response struct: %w", err)
 	}
 
 	if response.TimeOut > 0 {
@@ -162,11 +156,6 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 		Type: opcode,
 	}
 
-	sendBuf, err := WriteRecords(header, w)
-	if err != nil {
-		return fmt.Errorf("error serializing request: %v", err)
-	}
-
 	pending := &pendingRequest{
 		reply: r,
 		done:  make(chan struct{}, 1),
@@ -174,8 +163,8 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 
 	c.reqs.Store(header.Xid, pending)
 
-	if _, err = c.conn.Write(sendBuf); err != nil {
-		return fmt.Errorf("error writing request to net.conn: %w", err)
+	if err := WriteRecords(c.conn, header, w); err != nil {
+		return fmt.Errorf("error writing request: %w", err)
 	}
 
 	select {
@@ -244,13 +233,9 @@ func (c *Conn) keepAlive() {
 				Xid:  pingXID,
 				Type: opPing,
 			}
-			sendBuf, err := WriteRecords(header)
-			if err != nil {
-				log.Printf("error serializing ping request: %v", err)
-				return
-			}
-			if _, err = c.conn.Write(sendBuf); err != nil {
-				log.Printf("error writing ping request to net.conn: %v", err)
+
+			if err := WriteRecords(c.conn, header); err != nil {
+				log.Printf("error writing ping request: %v", err)
 				return
 			}
 		case <-c.sessionCtx.Done():

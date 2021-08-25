@@ -87,7 +87,6 @@ func TestGetDataNoTimeout(t *testing.T) {
 			t.Fatalf("unexpected error calling GetData: %v", err)
 		}
 	}
-
 }
 
 func TestGetChildrenDefault(t *testing.T) {
