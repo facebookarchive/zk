@@ -3,8 +3,8 @@ package zk
 // Error is an error code returned in a ReplyHeader by a Zookeeper server.
 type Error int32
 
-func (c Error) Error() string {
-	if err, ok := errToString[c]; ok {
+func (e Error) Error() string {
+	if err, ok := errToString[e]; ok {
 		return err
 	}
 
