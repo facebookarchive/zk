@@ -20,7 +20,7 @@ func TestClientRetryLogic(t *testing.T) {
 
 	// Create a new handler which will make the test server return an error for a set number of tries.
 	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
-	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, int32) {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, Code) {
 		if failCalls > 0 {
 			failCalls--
 			return nil, 0 // nil response causes retryable error
@@ -74,7 +74,7 @@ func TestClientRetryLogicFails(t *testing.T) {
 
 func TestClientContextCanceled(t *testing.T) {
 	calls := 0
-	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, int32) {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, Code) {
 		calls++
 
 		return testutils.DefaultHandler(req)
@@ -103,7 +103,7 @@ func TestClientContextCanceled(t *testing.T) {
 }
 
 func TestClientErrorCodeHandling(t *testing.T) {
-	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, int32) {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (jute.RecordWriter, Code) {
 		// return error code, which the client should interpret as a non-retryable server-side error
 		return &proto.GetChildrenResponse{}, -1
 	})

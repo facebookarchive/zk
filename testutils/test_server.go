@@ -18,7 +18,7 @@ const defaultListenAddress = "127.0.0.1:"
 // HandlerFunc is the function the server uses to return a response to the client based on the request received.
 // If an error is present, an error code should be returned.
 // Note that custom handlers need to send a ReplyHeader before a response as per the Zookeeper protocol.
-type HandlerFunc func(reader jute.RecordReader) (jute.RecordWriter, int32)
+type HandlerFunc func(reader jute.RecordReader) (jute.RecordWriter, zk.Code)
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -103,14 +103,14 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return errors.New("handler returned nil response")
 		}
 
-		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid, Err: errCode}, response); err != nil {
+		if err = serializeAndSend(conn, &proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}, response); err != nil {
 			return fmt.Errorf("error serializing response: %w", err)
 		}
 	}
 }
 
 // DefaultHandler returns a default response based on the request received, with no error code.
-func DefaultHandler(request jute.RecordReader) (jute.RecordWriter, int32) {
+func DefaultHandler(request jute.RecordReader) (jute.RecordWriter, zk.Code) {
 	var resp jute.RecordWriter
 	switch request.(type) {
 	case *proto.GetDataRequest:
