@@ -16,8 +16,9 @@ import (
 const defaultListenAddress = "127.0.0.1:"
 
 // HandlerFunc is the function the server uses to return a response to the client based on the request received.
+// If an error is present, an error code should be returned.
 // Note that custom handlers need to send a ReplyHeader before a response as per the Zookeeper protocol.
-type HandlerFunc func(reader jute.RecordReader) jute.RecordWriter
+type HandlerFunc func(reader jute.RecordReader) (zk.Code, jute.RecordWriter)
 
 // TestServer is a mock Zookeeper server which enables local testing without the need for a Zookeeper instance.
 type TestServer struct {
@@ -97,19 +98,23 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 			return fmt.Errorf("error reading request: %w", err)
 		}
 
-		response := s.ResponseHandler(req)
-		if response == nil {
+		errCode, response := s.ResponseHandler(req)
+		send := []jute.RecordWriter{&proto.ReplyHeader{Xid: header.Xid, Err: int32(errCode)}}
+		if response == nil && errCode == 0 {
 			return errors.New("handler returned nil response")
 		}
+		if errCode == 0 {
+			send = append(send, response)
+		}
 
-		if err = zk.WriteRecords(conn, &proto.ReplyHeader{Xid: header.Xid}, response); err != nil {
+		if err = zk.WriteRecords(conn, send...); err != nil {
 			return fmt.Errorf("error writing response: %w", err)
 		}
 	}
 }
 
-// DefaultHandler returns a default response based on the opcode received.
-func DefaultHandler(request jute.RecordReader) jute.RecordWriter {
+// DefaultHandler returns a default response based on the request received, with no error code.
+func DefaultHandler(request jute.RecordReader) (zk.Code, jute.RecordWriter) {
 	var resp jute.RecordWriter
 	switch request.(type) {
 	case *proto.GetDataRequest:
@@ -118,5 +123,5 @@ func DefaultHandler(request jute.RecordReader) jute.RecordWriter {
 		resp = &proto.GetChildrenResponse{Children: []string{"test"}}
 	}
 
-	return resp
+	return 0, resp
 }

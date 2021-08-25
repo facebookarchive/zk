@@ -19,10 +19,10 @@ func TestClientRetryLogic(t *testing.T) {
 
 	// Create a new handler which will make the test server return an error for a set number of tries.
 	// We expect the client to recover from these errors and retry the RPC calls until success on the last try.
-	server, err := testutils.NewServer(func(req jute.RecordReader) jute.RecordWriter {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (Code, jute.RecordWriter) {
 		if failCalls > 0 {
 			failCalls--
-			return nil // nil response causes error
+			return 0, nil // nil response causes retryable error
 		}
 
 		return testutils.DefaultHandler(req)
@@ -73,7 +73,7 @@ func TestClientRetryLogicFails(t *testing.T) {
 
 func TestClientContextCanceled(t *testing.T) {
 	calls := 0
-	server, err := testutils.NewServer(func(req jute.RecordReader) jute.RecordWriter {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (Code, jute.RecordWriter) {
 		calls++
 
 		return testutils.DefaultHandler(req)
@@ -98,5 +98,29 @@ func TestClientContextCanceled(t *testing.T) {
 	// fail if client attempted retries on canceled ctx
 	if calls > 1 {
 		t.Fatalf("ctx.Err() is non-retryable, expected only 1 call, got %d", calls)
+	}
+}
+
+func TestClientErrorCodeHandling(t *testing.T) {
+	server, err := testutils.NewServer(func(req jute.RecordReader) (Code, jute.RecordWriter) {
+		// return error code, which the client should interpret as a non-retryable server-side error
+		return -1, nil
+	})
+	if err != nil {
+		t.Fatalf("error creating test server: %v", err)
+	}
+
+	client := &Client{
+		MaxRetries: defaultMaxRetries,
+		Ensemble:   server.Addr().String(),
+		Network:    server.Addr().Network(),
+	}
+
+	_, err = client.GetChildren(context.Background(), "/")
+
+	// verify that the ZK server error has been processed properly and had no retries
+	var ioError *Error
+	if errors.Is(err, ErrMaxRetries) || !errors.As(err, &ioError) {
+		t.Fatalf("unexpected error calling GetChildren: %v", err)
 	}
 }
