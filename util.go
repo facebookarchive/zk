@@ -3,7 +3,7 @@ package zk
 import (
 	"bytes"
 	"fmt"
-	"net"
+	"io"
 
 	"github.com/facebookincubator/zk/internal/proto"
 
@@ -11,8 +11,8 @@ import (
 )
 
 // WriteRecords takes in one or more RecordWriter instances, serializes them to a byte array
-// and writes them to the provided net.Conn.
-func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
+// and writes them to the provided io.Writer.
+func WriteRecords(w io.Writer, generated ...jute.RecordWriter) error {
 	sendBuf := &bytes.Buffer{}
 	enc := jute.NewBinaryEncoder(sendBuf)
 
@@ -34,8 +34,8 @@ func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
 		return fmt.Errorf("could not write buffer: %w", err)
 	}
 
-	if _, err := conn.Write(sendBuf.Bytes()); err != nil {
-		return fmt.Errorf("error writing to net.conn: %w", err)
+	if _, err := w.Write(sendBuf.Bytes()); err != nil {
+		return fmt.Errorf("error writing to io.Writer: %w", err)
 	}
 
 	return nil
@@ -43,14 +43,14 @@ func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
 
 // ReadRecord reads the request header and body depending on the opcode.
 // It returns the serialized request header and body, or an error if it occurs.
-func ReadRecord(dec *jute.BinaryDecoder) (*proto.RequestHeader, jute.RecordReader, error) {
-	if _, err := dec.ReadInt(); err != nil {
+func ReadRecord(r io.Reader) (*proto.RequestHeader, jute.RecordReader, error) {
+	dec, err := createDecoder(r)
+	if err != nil {
 		return nil, nil, fmt.Errorf("error reading request length: %w", err)
 	}
 
 	header := &proto.RequestHeader{}
-
-	if err := dec.ReadRecord(header); err != nil {
+	if err = dec.ReadRecord(header); err != nil {
 		return nil, nil, fmt.Errorf("error reading RequestHeader: %w", err)
 	}
 
@@ -69,4 +69,19 @@ func ReadRecord(dec *jute.BinaryDecoder) (*proto.RequestHeader, jute.RecordReade
 	}
 
 	return header, req, nil
+}
+
+// createDecoder reads a packet from io.Reader by reading N bytes from the packet header first,
+// and then reading the remaining N bytes as per the Zookeeper protocol.
+// It returns a jute.Decoder which can then be used to serialize the bytes into a valid struct.
+func createDecoder(r io.Reader) (jute.Decoder, error) {
+	dec := jute.NewBinaryDecoder(r)
+	readBytes, err := dec.ReadBuffer()
+	if err != nil {
+		return nil, fmt.Errorf("error reading packet: %w", err)
+	}
+
+	dec = jute.NewBinaryDecoder(bytes.NewBuffer(readBytes))
+
+	return dec, nil
 }

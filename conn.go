@@ -108,12 +108,11 @@ func (c *Conn) authenticate() error {
 	}
 
 	// receive bytes from same socket, reading the message length first
-	dec := jute.NewBinaryDecoder(c.conn)
-
-	// read response length
-	if _, err := dec.ReadInt(); err != nil {
-		return fmt.Errorf("could not decode response length: %w", err)
+	dec, err := createDecoder(c.conn)
+	if err != nil {
+		return fmt.Errorf("error reading auth response: %w", err)
 	}
+
 	response := proto.ConnectResponse{}
 	if err := response.Read(dec); err != nil {
 		return fmt.Errorf("could not decode response struct: %w", err)
@@ -179,17 +178,17 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 
 func (c *Conn) handleReads() {
 	defer c.Close()
-	dec := jute.NewBinaryDecoder(c.conn)
 	for {
 		if c.sessionCtx.Err() != nil {
 			return
 		}
-		_, err := dec.ReadInt() // read response length
+
+		dec, err := createDecoder(c.conn)
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
 			return // don't make further attempts to read from closed connection, close goroutine
 		}
 		if err != nil {
-			log.Printf("could not decode response length: %v", err)
+			log.Printf("could not read response packet: %v", err)
 			return
 		}
 
