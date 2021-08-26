@@ -1,5 +1,7 @@
 package zk
 
+import "fmt"
+
 // Error is an error code returned in a ReplyHeader by a Zookeeper server.
 type Error int32
 
@@ -8,7 +10,7 @@ func (e Error) Error() string {
 		return err
 	}
 
-	return "unknown"
+	return fmt.Sprintf("unknown error code: %d", e)
 }
 
 // ref: https://github.com/apache/zookeeper/blob/master/zookeeper-client/zookeeper-client-c/include/zookeeper.h#L94
