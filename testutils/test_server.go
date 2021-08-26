@@ -91,9 +91,8 @@ func (s *TestServer) handleConn(conn net.Conn) error {
 		return fmt.Errorf("error sending ConnectResponse: %w", err)
 	}
 
-	dec := jute.NewBinaryDecoder(conn)
 	for {
-		header, req, err := zk.ReadRecord(dec)
+		header, req, err := zk.ReadRecord(conn)
 		if err != nil {
 			return fmt.Errorf("error reading request: %w", err)
 		}

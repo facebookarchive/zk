@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -109,11 +110,13 @@ func (c *Conn) authenticate() error {
 
 	// receive bytes from same socket, reading the message length first
 	dec := jute.NewBinaryDecoder(c.conn)
-
-	// read response length
-	if _, err := dec.ReadInt(); err != nil {
-		return fmt.Errorf("could not decode response length: %w", err)
+	readBytes, err := dec.ReadBuffer()
+	if err != nil {
+		return fmt.Errorf("error reading request: %w", err)
 	}
+
+	dec = jute.NewBinaryDecoder(bytes.NewBuffer(readBytes))
+
 	response := proto.ConnectResponse{}
 	if err := response.Read(dec); err != nil {
 		return fmt.Errorf("could not decode response struct: %w", err)
@@ -184,7 +187,8 @@ func (c *Conn) handleReads() {
 		if c.sessionCtx.Err() != nil {
 			return
 		}
-		_, err := dec.ReadInt() // read response length
+
+		readBytes, err := dec.ReadBuffer()
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
 			return // don't make further attempts to read from closed connection, close goroutine
 		}
@@ -192,9 +196,10 @@ func (c *Conn) handleReads() {
 			log.Printf("could not decode response length: %v", err)
 			return
 		}
+		fromBuf := jute.NewBinaryDecoder(bytes.NewBuffer(readBytes))
 
 		replyHeader := &proto.ReplyHeader{}
-		if err = dec.ReadRecord(replyHeader); err != nil {
+		if err = fromBuf.ReadRecord(replyHeader); err != nil {
 			log.Printf("could not decode response struct: %v", err)
 			return
 		}
@@ -212,7 +217,7 @@ func (c *Conn) handleReads() {
 		if replyHeader.Err != 0 {
 			code := Error(replyHeader.Err)
 			pending.error = &code
-		} else if err = dec.ReadRecord(pending.reply); err != nil {
+		} else if err = fromBuf.ReadRecord(pending.reply); err != nil {
 			log.Printf("could not decode response struct: %v", err)
 			return
 		}

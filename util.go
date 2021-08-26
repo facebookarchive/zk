@@ -3,6 +3,7 @@ package zk
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/facebookincubator/zk/internal/proto"
@@ -43,14 +44,17 @@ func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
 
 // ReadRecord reads the request header and body depending on the opcode.
 // It returns the serialized request header and body, or an error if it occurs.
-func ReadRecord(dec *jute.BinaryDecoder) (*proto.RequestHeader, jute.RecordReader, error) {
-	if _, err := dec.ReadInt(); err != nil {
+func ReadRecord(r io.Reader) (*proto.RequestHeader, jute.RecordReader, error) {
+	dec := jute.NewBinaryDecoder(r)
+	readBytes, err := dec.ReadBuffer()
+	if err != nil {
 		return nil, nil, fmt.Errorf("error reading request length: %w", err)
 	}
 
-	header := &proto.RequestHeader{}
+	dec = jute.NewBinaryDecoder(bytes.NewBuffer(readBytes))
 
-	if err := dec.ReadRecord(header); err != nil {
+	header := &proto.RequestHeader{}
+	if err = dec.ReadRecord(header); err != nil {
 		return nil, nil, fmt.Errorf("error reading RequestHeader: %w", err)
 	}
 
