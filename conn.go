@@ -108,7 +108,7 @@ func (c *Conn) authenticate() error {
 	}
 
 	// receive bytes from same socket, reading the message length first
-	dec, err := readPacket(c.conn)
+	dec, err := createDecoder(c.conn)
 	if err != nil {
 		return fmt.Errorf("error reading auth response: %w", err)
 	}
@@ -183,7 +183,7 @@ func (c *Conn) handleReads() {
 			return
 		}
 
-		dec, err := readPacket(c.conn)
+		dec, err := createDecoder(c.conn)
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
 			return // don't make further attempts to read from closed connection, close goroutine
 		}
