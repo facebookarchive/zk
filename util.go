@@ -44,13 +44,10 @@ func WriteRecords(w io.Writer, generated ...jute.RecordWriter) error {
 // ReadRecord reads the request header and body depending on the opcode.
 // It returns the serialized request header and body, or an error if it occurs.
 func ReadRecord(r io.Reader) (*proto.RequestHeader, jute.RecordReader, error) {
-	dec := jute.NewBinaryDecoder(r)
-	readBytes, err := dec.ReadBuffer()
+	dec, err := readPacket(r)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading request length: %w", err)
 	}
-
-	dec = jute.NewBinaryDecoder(bytes.NewBuffer(readBytes))
 
 	header := &proto.RequestHeader{}
 	if err = dec.ReadRecord(header); err != nil {
@@ -72,4 +69,19 @@ func ReadRecord(r io.Reader) (*proto.RequestHeader, jute.RecordReader, error) {
 	}
 
 	return header, req, nil
+}
+
+// readPacket reads a packet from io.Reader by reading N bytes from the packet header first,
+// and then reading the remaining N bytes as per the Zookeeper protocol.
+// It returns a jute.Decoder which can then be used to serialize the bytes into a valid struct.
+func readPacket(r io.Reader) (jute.Decoder, error) {
+	dec := jute.NewBinaryDecoder(r)
+	readBytes, err := dec.ReadBuffer()
+	if err != nil {
+		return nil, fmt.Errorf("error reading packet: %w", err)
+	}
+
+	dec = jute.NewBinaryDecoder(bytes.NewBuffer(readBytes))
+
+	return dec, nil
 }
