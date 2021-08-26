@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 
 	"github.com/facebookincubator/zk/internal/proto"
 
@@ -12,8 +11,8 @@ import (
 )
 
 // WriteRecords takes in one or more RecordWriter instances, serializes them to a byte array
-// and writes them to the provided net.Conn.
-func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
+// and writes them to the provided io.Writer.
+func WriteRecords(w io.Writer, generated ...jute.RecordWriter) error {
 	sendBuf := &bytes.Buffer{}
 	enc := jute.NewBinaryEncoder(sendBuf)
 
@@ -35,8 +34,8 @@ func WriteRecords(conn net.Conn, generated ...jute.RecordWriter) error {
 		return fmt.Errorf("could not write buffer: %w", err)
 	}
 
-	if _, err := conn.Write(sendBuf.Bytes()); err != nil {
-		return fmt.Errorf("error writing to net.conn: %w", err)
+	if _, err := w.Write(sendBuf.Bytes()); err != nil {
+		return fmt.Errorf("error writing to io.Writer: %w", err)
 	}
 
 	return nil
