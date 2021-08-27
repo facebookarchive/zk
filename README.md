@@ -94,10 +94,10 @@ See also [example.go](https://github.com/facebookincubator/zk/blob/master/exampl
 
 ## TODO
 
-* Support for [watches](https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkWatches)
-* Support for [locks](https://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_Locks) and other recipes
-* Extension of [the API](https://zookeeper.apache.org/doc/r3.4.6/api/org/apache/zookeeper/ZooKeeper.html) so that all of Zookeeper’s client commands are supported
-* Digest-based and SASL authentication
+- [ ] Support for [watches](https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html#ch_zkWatches)
+- [ ] Support for [locks](https://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_Locks) and other recipes
+- [ ] Extension of [the API](https://zookeeper.apache.org/doc/r3.4.6/api/org/apache/zookeeper/ZooKeeper.html) so that all of Zookeeper’s client commands are supported
+- [ ] Digest-based and SASL authentication
 
 ## Contributing
 
