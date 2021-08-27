@@ -35,7 +35,7 @@ client := &Client{
 }
 defer client.Reset()
 
-data, err := client.GetData("/")
+data, err := client.GetData(context.Background(), "/")
 log.Println(string(data))
 
 children, err := client.GetChildren(context.Background(), "/")
