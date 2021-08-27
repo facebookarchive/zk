@@ -12,7 +12,7 @@ The project is still in active development and therefore may not be ready for pr
 The recommended procedure is to download the `zk` client via `go get`:
 
 ```
-`go get -u github.com/facebookincubator/zk`
+go get -u github.com/facebookincubator/zk
 ```
 
 After successfully running this command, the library will be available in your `GOPATH`, and you can start using it to communicate with your Zookeeper infrastructure.
@@ -28,7 +28,7 @@ Connections are kept alive by the client and should be closed after usage by cal
 
 ### Default Client
 
-```
+```go
 client := &Client{
     Network:    "tcp",
     Ensemble:   "127.0.0.1:2181",
@@ -47,7 +47,7 @@ log.Println(children)
 
 When connection problems or timeouts are encountered, the client will try to re-establish the connection and retry the operation. Some errors are non-retryable, for example if the znode specified does not exist.
 
-```
+```go
 client := &Client{
     Network:        "tcp",
     Ensemble:       "127.0.0.1:2181",
@@ -64,7 +64,7 @@ log.Println(string(data))
 
 Should library users require custom discovery mechanisms, for example for connecting to multiple nodes, they can add a custom `Dialer` to the Client.
 
-```
+```go
 client := &Client{
     Dialer: func(ctx context.Context, network, addr string) (net.Conn, error) {
         // custom logic here
@@ -76,7 +76,7 @@ client := &Client{
 
 Client users can get access to the lower-level `Conn` primitive by Calling `zk.DialContext`. The connection’s lifetime can then be handled by passing a `Context` to the call.
 
-```
+```go
 conn, err := DialContext(context.Background(), "tcp", "127.0.0.1:2181")
 if err != nil {
     log.Println("unexpected error: ", err)
