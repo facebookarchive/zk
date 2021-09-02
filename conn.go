@@ -14,9 +14,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/facebookincubator/zk/internal/proto"
@@ -260,10 +260,5 @@ func (c *Conn) clearPendingRequests() {
 }
 
 func (c *Conn) getXid() int32 {
-	if c.xid == math.MaxInt32 {
-		c.xid = 1
-	}
-	c.xid++
-
-	return c.xid
+	return atomic.AddInt32(&c.xid, 1)
 }
