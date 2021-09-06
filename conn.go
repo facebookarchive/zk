@@ -73,7 +73,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 
 	conn, err := client.Dialer(ctx, network, address)
 	if err != nil {
-		return nil, fmt.Errorf("error dialing ZK server: %v", err)
+		return nil, fmt.Errorf("could not dial ZK server: %w", err)
 	}
 
 	sessionCtx, cancel := context.WithCancel(context.Background())
@@ -88,7 +88,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		c.sessionTimeout = client.SessionTimeout
 	}
 	if err = c.authenticate(); err != nil {
-		return nil, fmt.Errorf("error authenticating with ZK server: %v", err)
+		return nil, fmt.Errorf("could not authenticate with ZK server: %w", err)
 	}
 
 	go c.handleReads()
@@ -112,18 +112,18 @@ func (c *Conn) authenticate() error {
 	}
 
 	if err := WriteRecords(c.conn, request); err != nil {
-		return fmt.Errorf("error writing authentication request: %w", err)
+		return fmt.Errorf("could not write authentication request: %w", err)
 	}
 
 	// receive bytes from same socket, reading the message length first
 	dec, err := createDecoder(c.conn)
 	if err != nil {
-		return fmt.Errorf("error reading auth response: %w", err)
+		return fmt.Errorf("could not read auth response: %w", err)
 	}
 
 	response := proto.ConnectResponse{}
 	if err := response.Read(dec); err != nil {
-		return fmt.Errorf("could not decode response struct: %w", err)
+		return fmt.Errorf("could not decode authentication response: %w", err)
 	}
 
 	if response.TimeOut > 0 {
@@ -171,7 +171,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 	c.reqs.Store(header.Xid, pending)
 
 	if err := WriteRecords(c.conn, header, w); err != nil {
-		return fmt.Errorf("error writing request: %w", err)
+		return fmt.Errorf("could not write rpc request: %w", err)
 	}
 
 	select {
@@ -202,7 +202,7 @@ func (c *Conn) handleReads() {
 
 		replyHeader := &proto.ReplyHeader{}
 		if err = dec.ReadRecord(replyHeader); err != nil {
-			log.Printf("could not decode response struct: %v", err)
+			log.Printf("could not decode reply header: %v", err)
 			return
 		}
 		if replyHeader.Xid == pingXID {
@@ -220,7 +220,7 @@ func (c *Conn) handleReads() {
 			code := Error(replyHeader.Err)
 			pending.error = &code
 		} else if err = dec.ReadRecord(pending.reply); err != nil {
-			log.Printf("could not decode response struct: %v", err)
+			log.Printf("could not decode reply record: %v", err)
 			return
 		}
 
