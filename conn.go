@@ -17,6 +17,7 @@ import (
 	"math"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/facebookincubator/zk/internal/proto"
@@ -31,8 +32,7 @@ type Conn struct {
 	conn net.Conn
 
 	// client-side request ID
-	xid   int32
-	xidMu sync.Mutex
+	xid int32
 	// the client sends a requested timeout, the server responds with the timeout that it can give the client
 	sessionTimeout time.Duration
 
@@ -159,7 +159,7 @@ func (c *Conn) GetChildren(path string) ([]string, error) {
 
 func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error {
 	header := &proto.RequestHeader{
-		Xid:  c.getXid(),
+		Xid:  c.nextXid(),
 		Type: opcode,
 	}
 
@@ -259,15 +259,6 @@ func (c *Conn) clearPendingRequests() {
 	})
 }
 
-func (c *Conn) getXid() int32 {
-	c.xidMu.Lock()
-	defer c.xidMu.Unlock()
-
-	if c.xid == math.MaxInt32 {
-		c.xid = 1
-	} else {
-		c.xid++
-	}
-
-	return c.xid
+func (c *Conn) nextXid() int32 {
+	return atomic.AddInt32(&c.xid, 1) & math.MaxInt32
 }
