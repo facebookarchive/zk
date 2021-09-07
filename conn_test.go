@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math"
 	"net"
 	"reflect"
 	"testing"
@@ -159,5 +160,21 @@ func TestErrorCodeHandling(t *testing.T) {
 	var zkError *Error
 	if !errors.As(err, &zkError) {
 		t.Fatalf("unexpected error calling GetChildren: %v", err)
+	}
+}
+
+func TestNextXid(t *testing.T) {
+	conn := &Conn{}
+
+	if conn.nextXid() != 1 {
+		t.Fatalf("expected nextXid to increment from 0 to 1")
+	}
+}
+
+func TestNextXidOverflow(t *testing.T) {
+	conn := &Conn{xid: math.MaxInt32}
+
+	if conn.nextXid() != 0 {
+		t.Fatalf("expected nextXid not to overflow")
 	}
 }
