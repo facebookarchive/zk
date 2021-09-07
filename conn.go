@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -26,6 +25,7 @@ import (
 )
 
 const defaultTimeout = 2 * time.Second
+const overflowBitMask = 1<<31 - 1
 
 // Conn represents a client connection to a Zookeeper server and parameters needed to handle its lifetime.
 type Conn struct {
@@ -260,5 +260,5 @@ func (c *Conn) clearPendingRequests() {
 }
 
 func (c *Conn) nextXid() int32 {
-	return atomic.AddInt32(&c.xid, 1) & math.MaxInt32
+	return atomic.AddInt32(&c.xid, 1) & overflowBitMask
 }
