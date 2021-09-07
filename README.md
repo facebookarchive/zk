@@ -1,5 +1,10 @@
 # Native Go Zookeeper Client Library
 
+[![godoc](https://godoc.org/github.com/facebookincubator/zk?status.svg)](https://godoc.org/github.com/facebookincubator/zk)
+[![Build Status](https://img.shields.io/github/workflow/status/facebookincubator/zk/unit-test)](https://github.com/facebookincubator/zk/actions?query=branch%3Amain)
+[![Go Report Card](https://goreportcard.com/badge/github.com/facebookincubator/zk)](https://goreportcard.com/report/github.com/facebookincubator/zk)
+![License](https://img.shields.io/github/license/facebookincubator/zk)
+
 This library enables users to communicate with Zookeeper servers over the Zookeeper wire protocol and provides an API for easy usage. It leverages the [Jute compiler](https://github.com/go-zookeeper/jute) for simple serialization and deserialization of protocol messages.
 
 Message formats are defined in a [Jute file](https://github.com/apache/zookeeper/blob/master/zookeeper-jute/src/main/resources/zookeeper.jute) which can be compiled to Go code similarly to Thrift or Protobuf. 
