@@ -39,12 +39,19 @@ type Conn struct {
 	reqs          sync.Map
 	cancelSession context.CancelFunc
 	sessionCtx    context.Context
+
+	writeRecordsChan chan *writeRecordRequest
 }
 
 type pendingRequest struct {
 	reply jute.RecordReader
 	done  chan struct{}
 	error error
+}
+
+type writeRecordRequest struct {
+	header *proto.RequestHeader
+	writer jute.RecordWriter
 }
 
 // isAlive() checks the TCP connection is alive by reading from the sessionCtx channel.
@@ -78,10 +85,11 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 
 	sessionCtx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
-		conn:           conn,
-		sessionTimeout: defaultTimeout,
-		cancelSession:  cancel,
-		sessionCtx:     sessionCtx,
+		conn:             conn,
+		sessionTimeout:   defaultTimeout,
+		cancelSession:    cancel,
+		sessionCtx:       sessionCtx,
+		writeRecordsChan: make(chan *writeRecordRequest, 10),
 	}
 
 	if client.SessionTimeout != 0 {
@@ -91,7 +99,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 		return nil, fmt.Errorf("could not authenticate with ZK server: %w", err)
 	}
 
-	go c.handleReads()
+	go c.handleReadWrites()
 	go c.keepAlive()
 
 	return c, nil
@@ -101,6 +109,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 func (c *Conn) Close() error {
 	c.cancelSession()
 	c.clearPendingRequests()
+	// close(c.writeRecordsChan)
 
 	return c.conn.Close()
 }
@@ -170,8 +179,9 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 
 	c.reqs.Store(header.Xid, pending)
 
-	if err := WriteRecords(c.conn, header, w); err != nil {
-		return fmt.Errorf("could not write rpc request: %w", err)
+	c.writeRecordsChan <- &writeRecordRequest{
+		header: header,
+		writer: w,
 	}
 
 	select {
@@ -184,11 +194,16 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 	}
 }
 
-func (c *Conn) handleReads() {
+func (c *Conn) handleReadWrites() {
 	defer c.Close()
 	for {
 		if c.sessionCtx.Err() != nil {
 			return
+		}
+		wr := <-c.writeRecordsChan
+		if err := WriteRecords(c.conn, wr.header, wr.writer); err != nil {
+			log.Printf("could not write rpc request: %v", err)
+			continue
 		}
 
 		dec, err := createDecoder(c.conn)
@@ -241,10 +256,8 @@ func (c *Conn) keepAlive() {
 				Xid:  pingXID,
 				Type: opPing,
 			}
-
-			if err := WriteRecords(c.conn, header); err != nil {
-				log.Printf("error writing ping request: %v", err)
-				return
+			c.writeRecordsChan <- &writeRecordRequest{
+				header: header,
 			}
 		case <-c.sessionCtx.Done():
 			return
