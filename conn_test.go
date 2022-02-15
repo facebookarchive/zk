@@ -11,7 +11,6 @@ package zk
 import (
 	"context"
 	"errors"
-	"io"
 	"math"
 	"net"
 	"reflect"
@@ -98,7 +97,7 @@ func TestGetDataNoTimeout(t *testing.T) {
 	case <-time.After(defaultTimeout):
 		t.Fatalf("client should not wait for timeout if connection is closed")
 	default:
-		if err != nil && !errors.Is(errors.Unwrap(err), io.ErrClosedPipe) {
+		if err != nil && !errors.Is(errors.Unwrap(err), context.Canceled) {
 			t.Fatalf("unexpected error calling GetData: %v", err)
 		}
 	}
