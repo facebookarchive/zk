@@ -112,7 +112,6 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 func (c *Conn) Close() error {
 	c.cancelSession()
 	c.clearPendingRequests()
-	close(c.wchann)
 
 	return c.conn.Close()
 }
