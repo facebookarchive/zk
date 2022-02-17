@@ -24,8 +24,11 @@ import (
 	"github.com/go-zookeeper/jute/lib/go/jute"
 )
 
-const defaultTimeout = 2 * time.Second
-const overflowBitMask = 1<<31 - 1
+const (
+	defaultTimeout   = 2 * time.Second
+	overflowBitMask  = 1<<31 - 1
+	writeChannelSize = 10
+)
 
 // Conn represents a client connection to a Zookeeper server and parameters needed to handle its lifetime.
 type Conn struct {
