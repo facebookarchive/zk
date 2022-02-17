@@ -88,7 +88,7 @@ func TestGetDataNoTimeout(t *testing.T) {
 		conn:             client,
 		sessionCtx:       sessionCtx,
 		cancelSession:    cancelSession,
-		writeRecordsChan: make(chan *writeRecordRequest, writeChannelSize),
+		wchann: make(chan *writeRecordRequest, writeChannelSize),
 	}
 	// close conn before sending request
 	conn.Close()

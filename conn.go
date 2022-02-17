@@ -43,7 +43,7 @@ type Conn struct {
 	cancelSession context.CancelFunc
 	sessionCtx    context.Context
 
-	writeRecordsChan chan *writeRecordRequest
+	wchann chan *writeRecordRequest
 }
 
 type pendingRequest struct {
@@ -88,11 +88,11 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 
 	sessionCtx, cancel := context.WithCancel(context.Background())
 	c := &Conn{
-		conn:             conn,
-		sessionTimeout:   defaultTimeout,
-		cancelSession:    cancel,
-		sessionCtx:       sessionCtx,
-		writeRecordsChan: make(chan *writeRecordRequest, 10),
+		conn:           conn,
+		sessionTimeout: defaultTimeout,
+		cancelSession:  cancel,
+		sessionCtx:     sessionCtx,
+		wchann:         make(chan *writeRecordRequest, writeChannelSize),
 	}
 
 	if client.SessionTimeout != 0 {
@@ -112,7 +112,7 @@ func (client *Client) DialContext(ctx context.Context, network, address string) 
 func (c *Conn) Close() error {
 	c.cancelSession()
 	c.clearPendingRequests()
-	// close(c.writeRecordsChan)
+	close(c.wchann)
 
 	return c.conn.Close()
 }
@@ -182,7 +182,7 @@ func (c *Conn) rpc(opcode int32, w jute.RecordWriter, r jute.RecordReader) error
 
 	c.reqs.Store(header.Xid, pending)
 
-	c.writeRecordsChan <- &writeRecordRequest{
+	c.wchann <- &writeRecordRequest{
 		header: header,
 		writer: w,
 	}
@@ -203,7 +203,7 @@ func (c *Conn) handleReadWrites() {
 		if c.sessionCtx.Err() != nil {
 			return
 		}
-		wr := <-c.writeRecordsChan
+		wr := <-c.wchann
 		if err := WriteRecords(c.conn, wr.header, wr.writer); err != nil {
 			log.Printf("could not write rpc request: %v", err)
 			continue
@@ -259,7 +259,7 @@ func (c *Conn) keepAlive() {
 				Xid:  pingXID,
 				Type: opPing,
 			}
-			c.writeRecordsChan <- &writeRecordRequest{
+			c.wchann <- &writeRecordRequest{
 				header: header,
 			}
 		case <-c.sessionCtx.Done():
